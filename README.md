@@ -44,7 +44,7 @@ python control_robot_nengo_ocl.py
 This file loads in previous weights (filename set in above file), and desired trajectory (filename set in above file), into the purely recurrent architecture currently, and then builds some extra feedback architecture to control the arm. Finally simulates the network and the true arm and saves the simulation variables.
 
 The current control architecture using my forward model does not work.
-I have other configurations in mind to make this work.
+I have other configurations in mind (Stefan Schaal's papers etc.) to make this work.
 
 ##3. New project: With Marin + Camilo, we'll use forward model + RL for control.
 
