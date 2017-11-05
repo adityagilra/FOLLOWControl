@@ -63,7 +63,7 @@ testLearnedOn = '_seed2by0.3amplVaryHeights'
 #testLearnedOn = '__'                    # doesn't load any weights if file not found! use with initLearned say.
                                         # the string of inputType and trialClamp used for learning the to-be-tested system 
 saveSpikes = True                       # save spikes if testLearned and saveSpikes
-continueLearning = False                # whether to load old weights and continue learning from there
+continueLearning = True#False                # whether to load old weights and continue learning from there
                                         # doesn't work, maybe save error state, also confirm same encoders/decoders?
                                         # saving weights at the end is always enabled
 zeroLowWeights = False                  # set to zero weights below a certain value
@@ -88,7 +88,7 @@ seedR2 = 4              # another seed for the second layer
                         # as I possibly don't have enough neurons
                         # to tile the input properly (obsolete -- for high dim)
 seedR4 = 5              # for the nengonetexpect layer to generate reference signal
-seedRin = 2
+seedRin = 3#2
 np.random.seed([seedRin])# this seed generates the inpfn below (and non-nengo anything random)
 
 tau = 0.02              # second, synaptic tau
@@ -197,8 +197,8 @@ else:
 ### recurrent and feedforward connection matrices ###
 ###
 if errorLearning:                                       # PES plasticity on
-    Tmax = 1200.                                       # second - how long to run the simulation
-    continueTmax = 1200.                               # if continueLearning, then start with weights from continueTmax
+    Tmax = 10000.                                       # second - how long to run the simulation
+    continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
     reprRadiusIn = 0.2                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
     if recurrentLearning:                               # L2 recurrent learning
@@ -396,7 +396,7 @@ else:
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
         ('_seed'+str(seedRin)+'by'+str(inputreduction)+inputType if inputType != 'rampLeave' else '')
-baseFileName = pathprefix+'inverse_ff_rec_100ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_diff_ff_rec_20ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
@@ -532,13 +532,17 @@ if __name__ == "__main__":
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
         rateEvolve = nengo.Node(rateEvolveFn)                   # reference state evolution
-        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.1)*varFactors[Nobs:] )
+        rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.01))# delayed reference state evolution
+        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.02)*varFactors[Nobs:] )
                                                                 # reference input torque evolution
                                                                 # scale input to network by torque factors
         # input layer from which feedforward weights to ratorOut are computed
         ratorIn = nengo.Ensemble( Nexc, dimensions=Nobs, radius=reprRadiusIn,
                             neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
+        ratorInD = nengo.Ensemble( Nexc, dimensions=Nobs, radius=reprRadiusIn,
+                            neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
         nengo.Connection(rateEvolve, ratorIn, synapse=None)
+        nengo.Connection(rateEvolveD, ratorInD, synapse=None)
                                                                 # No filtering here as no filtering/delay in the plant/arm
         # layer with learning incorporated
         #intercepts = np.append(np.random.uniform(-0.2,0.2,size=Nexc//2),np.random.uniform(-1.,1.,size=Nexc//2))
@@ -557,8 +561,8 @@ if __name__ == "__main__":
             nengo.Connection(endTrialClamp,ratorOut.neurons,synapse=1e-3)
                                                                     # fast synapse for fast-reacting clamp
         
-        EtoE = nengo.Connection(ratorOut.neurons, ratorOut.neurons,
-                                    transform=Wdyn2, synapse=tau)   # synapse is tau_syn for filtering
+        EtoE = nengo.Connection(ratorInD.neurons, ratorOut.neurons,
+                                    transform=Wdyn2/20., synapse=tau)   # synapse is tau_syn for filtering
 
         # make InEtoE connection after EtoE, so that reprRadius from EtoE
         #  instead of reprRadiusIn from InEtoE is used to compute decoders for ratorOut

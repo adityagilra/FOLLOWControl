@@ -58,7 +58,7 @@ funcType = 'robot2_todorov_gravity'     # if learnFunction, then robot two-link 
 initLearned = False and recurrentLearning and not inhibition
                                         # whether to start with learned weights (bidirectional/unclipped)
                                         # currently implemented only for recurrent learning
-testLearned = True#False                     # whether to test the learning, uses weights from continueLearning, but doesn't save again.
+testLearned = False                     # whether to test the learning, uses weights from continueLearning, but doesn't save again.
 testLearnedOn = '_seed2by0.3amplVaryHeights'
 #testLearnedOn = '__'                    # doesn't load any weights if file not found! use with initLearned say.
                                         # the string of inputType and trialClamp used for learning the to-be-tested system 
