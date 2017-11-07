@@ -88,7 +88,7 @@ seedR2 = 4              # another seed for the second layer
                         # as I possibly don't have enough neurons
                         # to tile the input properly (obsolete -- for high dim)
 seedR4 = 5              # for the nengonetexpect layer to generate reference signal
-seedRin = 3#2
+seedRin = 4#2
 np.random.seed([seedRin])# this seed generates the inpfn below (and non-nengo anything random)
 
 tau = 0.02              # second, synaptic tau
@@ -198,7 +198,7 @@ else:
 ###
 if errorLearning:                                       # PES plasticity on
     Tmax = 10000.                                       # second - how long to run the simulation
-    continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
+    continueTmax = 20000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
     reprRadiusIn = 0.2                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
     if recurrentLearning:                               # L2 recurrent learning
@@ -396,7 +396,7 @@ else:
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
         ('_seed'+str(seedRin)+'by'+str(inputreduction)+inputType if inputType != 'rampLeave' else '')
-baseFileName = pathprefix+'inverse_diff_ff_rec_20ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_diff_ff_rec_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
@@ -532,8 +532,8 @@ if __name__ == "__main__":
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
         rateEvolve = nengo.Node(rateEvolveFn)                   # reference state evolution
-        rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.01))# delayed reference state evolution
-        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.02)*varFactors[Nobs:] )
+        rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.025))# delayed reference state evolution
+        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.05)*varFactors[Nobs:] )
                                                                 # reference input torque evolution
                                                                 # scale input to network by torque factors
         # input layer from which feedforward weights to ratorOut are computed
