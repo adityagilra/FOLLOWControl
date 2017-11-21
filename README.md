@@ -8,7 +8,7 @@ Control using forward and inverse models learned by FOLLOW.
 This is workflow used for the NIPS submission: Gilra and Gerstner 2017.
 a. Learn the inverse model:
 (i) purely recurrent network:
-nohup python inverse_rec_robot_nengo_ocl.py &> nohup.out &
+nohup python inverse_robot_nengo_ocl.py &> nohup.out &
 OR
 (ii) feedforward followed by recurrent network:
 nohup python inverse_ff_rec_robot_nengo_ocl.py &> nohup.out &
