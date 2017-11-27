@@ -197,8 +197,8 @@ else:
 ### recurrent and feedforward connection matrices ###
 ###
 if errorLearning:                                       # PES plasticity on
-    Tmax = 1200.                                       # second - how long to run the simulation
-    continueTmax = 1200.                               # if continueLearning, then start with weights from continueTmax
+    Tmax = 10000.                                       # second - how long to run the simulation
+    continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
     reprRadiusIn = 0.2                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
     if recurrentLearning:                               # L2 recurrent learning
@@ -396,7 +396,7 @@ else:
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
         ('_seed'+str(seedRin)+'by'+str(inputreduction)+inputType if inputType != 'rampLeave' else '')
-baseFileName = pathprefix+'inverse_ff_rec_100ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_ff_rec_20ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
@@ -532,7 +532,7 @@ if __name__ == "__main__":
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
         rateEvolve = nengo.Node(rateEvolveFn)                   # reference state evolution
-        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.1)*varFactors[Nobs:] )
+        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.02)*varFactors[Nobs:] )
                                                                 # reference input torque evolution
                                                                 # scale input to network by torque factors
         # input layer from which feedforward weights to ratorOut are computed

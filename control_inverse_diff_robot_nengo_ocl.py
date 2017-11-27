@@ -58,11 +58,11 @@ funcType = 'robot2_todorov_gravity'     # if learnFunction, then robot two-link 
 
 #pathprefix = '/lcncluster/gilra/tmp/'
 pathprefix = '../data/'
-weightsLoadFileName = 'inverse_rep_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed3by0.3amplVaryHeights_3000.0s_endweights.shelve'
+weightsLoadFileName = 'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_50000.0s_endweights.shelve'
 #trajectoryFileName = 'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom3000.0_seed2by0.3RLSwing_10.0s_start'
 #trajectoryFileName = 'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLReach3_10.0s_start'
-#trajectoryFileName = 'robot2_todorov_gravity_traj_star'
-trajectoryFileName = 'robot2_todorov_gravity_traj_v2_diamond'
+trajectoryFileName = 'robot2_todorov_gravity_traj_v2_star'
+#trajectoryFileName = 'robot2_todorov_gravity_traj_v2_diamond'
 weightsLoadFileName = pathprefix + weightsLoadFileName
 trajectoryFileName = pathprefix + trajectoryFileName
 
@@ -145,10 +145,10 @@ if errorLearning:                                       # PES plasticity on
     Tmax = 10.                                          # second - how long to run the simulation
     continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
-                                                        #  weight changes cause L2 to follow ref within a cycle, not just error
+    reprRadiusIn = 0.2                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
     if 'acrobot' in funcType: inputreduction = 0.5      # input reduction factor
     else: inputreduction = 0.3                          # input reduction factor
-    Nexc = 5000                                         # number of excitatory neurons
+    Nexc = 3000                                         # number of excitatory neurons
     Tperiod = 1.                                        # second
 
 reprRadiusErr = 0.2                                     # with error feedback, error is quite small
@@ -168,10 +168,10 @@ Tclamp = 0.25                                           # time to clamp the ref,
 if errorLearning:
     errorAverage = False                    # whether to average error over the Tperiod scale
                                             # Nopes, this won't make it learn the intricate dynamics
-    errorFeedbackGain = 1.#10.                 # Feedback gain
+    errorFeedbackGain = 4.#10.                 # Feedback gain
                                             # below a gain of ~5, exc rates go to max, weights become large
     weightErrorTau = 10*tau                 # filter the error to the PES weight update rule
-    errorFeedbackTau = 1*tau                # synaptic tau for the error signal into layer2.ratorOut
+    errorFeedbackTau = 2*tau                # synaptic tau for the error signal into layer2.ratorOut
     errorGainDecay = False                  # whether errorFeedbackGain should decay exponentially to zero
                                             # decaying gain gives large weights increase below some critical gain ~3
     errorGainDecayRate = 1./200.            # 1/tau for decay of errorFeedbackGain if errorGainDecay is True
@@ -219,7 +219,7 @@ def evolveState(u):
 #plt.show()
 #sys.exit()
 
-dataFileName = trajectoryFileName+'_gain'+str(errorFeedbackGain)+'_control'
+dataFileName = trajectoryFileName+'_diff-ff_gain'+str(errorFeedbackGain)+'_control'
 print('data will be saved to', dataFileName+'.shelve')
 
 if __name__ == "__main__":
@@ -229,38 +229,53 @@ if __name__ == "__main__":
     print('building model')
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
-        nodeIn = nengo.Node( size_in=Nobs, output = lambda timeval,currval: desiredStateFn(timeval) )
-        ratorOut = nengo.Ensemble( Nexc, dimensions=Nobs+N//2, radius=reprRadius, \
-                                    neuron_type=nengo.neurons.LIF(), seed=seedR2, label='ratorOut')
+        nodeIn = nengo.Node(desiredStateFn)                             # reference state evolution
+        nodeInD = nengo.Node(lambda t: desiredStateFn(t-0.025))         # delayed reference state evolution
+        nodeInTarget = nengo.Node(lambda t: desiredStateFn(t-0.025-tau))# target for error feedback (even more delayed) reference state evolution
+        # input layer from which feedforward weights to ratorOut are computed
+        ratorIn = nengo.Ensemble( Nexc, dimensions=Nobs, radius=reprRadiusIn,
+                            neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
+        ratorInD = nengo.Ensemble( Nexc, dimensions=Nobs, radius=reprRadiusIn,
+                            neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
+        nengo.Connection(nodeIn, ratorIn, synapse=None)
+        nengo.Connection(nodeInD, ratorInD, synapse=None)
+                                                                # No filtering here as no filtering/delay in the plant/arm
+        # layer with learning incorporated
+        #intercepts = np.append(np.random.uniform(-0.2,0.2,size=Nexc//2),np.random.uniform(-1.,1.,size=Nexc//2))
+        ratorOut = nengo.Ensemble( Nexc, dimensions=N//2, radius=reprRadius,
+                            neuron_type=nengo.neurons.LIF(), seed=seedR2, label='ratorOut')
         # don't use the same seeds across the connections,
         #  else they seem to be all evaluated at the same values of low-dim variables
         #  causing seed-dependent convergence issues possibly due to similar frozen noise across connections
-        
-        EtoE = nengo.Connection(ratorOut.neurons, ratorOut.neurons,
-                                transform=np.zeros((Nexc,Nexc)), synapse=tau)   # synapse is tau_syn for filtering
-        state2RatorOut = nengo.Connection(nodeIn,ratorOut[:Nobs],synapse=None)
+                
+        EtoE = nengo.Connection(ratorInD.neurons, ratorOut.neurons,
+                                    transform=np.zeros((Nexc,Nexc)), synapse=tau)
 
+        # make InEtoE connection after EtoE, so that reprRadius from EtoE
+        #  instead of reprRadiusIn from InEtoE is used to compute decoders for ratorOut
+        InEtoE = nengo.Connection(ratorIn.neurons, ratorOut.neurons,
+                                    transform=np.zeros((Nexc,Nexc)), synapse=tau)
+        
         error = nengo.Node( size_in=Nobs, output = lambda timeval,err: err )
         # Error = x_desired - x_true
         # important to probe only ratorOut2error as output, and not directly ratorOut
         #  [was needed like this in the learning script, harmless here]
         # 'output' reads out the output of the connection in nengo 2.2 on
-        ratorOut_probe = nengo.Probe(ratorOut[:Nobs], synapse=tau)      # obsolete: not a meaningful output in inverse model!
-        torqueOut_probe = nengo.Probe(ratorOut[Nobs:],synapse=tau)
-        nodeIn_probe = nengo.Probe(nodeIn, synapse=None)                # actually x_desired
+        torqueOut_probe = nengo.Probe(ratorOut,synapse=tau)
+        nodeIn_probe = nengo.Probe(nodeInTarget, synapse=None)          # actually x_desired
 
         ###
         ### Add the x_desired and x_true connections to the error ensemble ###
         ###
-        stateDesired2error = nengo.Connection(nodeIn,error[:Nobs],\
+        stateDesired2error = nengo.Connection(nodeInTarget,error,\
                                                 synapse=None,transform=-np.eye(Nobs))
                                                                         # minus desired state
         # connect torque to node for filtering with tau (very important)
         #  and then via arm evolve function to error
         networkTorque = nengo.Node( size_in=N//2, output = lambda t,u: u)
-        torque2Node = nengo.Connection(ratorOut[Nobs:],networkTorque,synapse=tau)
-        # looks as if torque goes in, but actually via evolveState(), so actual arm state goes in
-        stateTrue2error = nengo.Connection(networkTorque,error[:Nobs],\
+        torque2Node = nengo.Connection(ratorOut,networkTorque,synapse=tau)
+        # looks as if torque goes in, but actually via evolveState(), so finally arm state goes in
+        stateTrue2error = nengo.Connection(networkTorque,error,\
                                                 synapse=None,function=lambda u:evolveState(u))
                                                                         # minus true state
         # 'output' reads out the output of the connection in nengo 2.2 on
@@ -269,8 +284,11 @@ if __name__ == "__main__":
         ###
         ### feed the error back to force output to follow the input ###
         ###
-        errorFeedbackConn = nengo.Connection(error,ratorOut[:Nobs],\
+        errorFeedbackConn = nengo.Connection(error,ratorIn,\
                                             synapse=errorFeedbackTau,\
+                                            transform=-errorFeedbackGain)
+        errorFeedbackConnD = nengo.Connection(error,ratorInD,\
+                                            synapse=errorFeedbackTau+tau,\
                                             transform=-errorFeedbackGain)
 
     #################################
@@ -289,7 +307,9 @@ if __name__ == "__main__":
                 ) as weights_dict:
             #sim.data[EtoE].weights = weights_dict['learnedWeights']    # can't be set, only read
             sim.signals[ sim.model.sig[EtoE]['weights'] ] \
-                                = weights_dict['learnedWeights']        # can be set if weights/decoders are plastic
+                                = weights_dict['learnedWeights']                    # can be set if weights/decoders are plastic
+            sim.signals[ sim.model.sig[InEtoE]['weights'] ] \
+                                = weights_dict['learnedInWeights']                  # can be set if weights/decoders are plastic
     else:
         print('Not found pre-learned weights,',weightsLoadFileName)
 

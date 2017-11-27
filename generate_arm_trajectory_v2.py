@@ -63,25 +63,32 @@ elif bot == 'arm_2link':
     dtpts = 0.001                                       # s, travel-time between points in targetTraj
                                                         # seems important to keep this same as Nengo dt
                                                         #  for nodeIn function in control_inverse_...!
-    intermediate_pts = int(1./dtpts)
-    # interpolate the crude trajectory by adding intermediate points
-    xlist,ylist = zip(*crudeTargetTraj)
-    targetTrajX = np.interp( np.linspace(0,len(xlist)-1,len(xlist)*intermediate_pts),
-                            range(len(xlist)), xlist )
-    targetTrajY = np.interp( np.linspace(0,len(ylist)-1,len(ylist)*intermediate_pts),
-                            range(len(ylist)), ylist )
+
+    fullTime = 5.0                                      # total time to draw
+    intermediate_pts_per_line = int(fullTime/dtpts/(len(crudeTargetTraj)-1))
+                                                        # number of lines = num of points - 1
     anglesOld = np.array((0.,0.))
-    Imax = len(targetTrajX)
+    # make intermediate_pts_per_line odd, since I add a midpoint per line and cubic dropoff on both sides
+    if intermediate_pts_per_line//2 == 0: intermediate_pts_per_line -= 1
+    # +1 for the starting point of the trajectory
+    Imax = intermediate_pts_per_line*(len(crudeTargetTraj)-1)+1
     Tmax = Imax*dtpts
     stateTraj = np.zeros((Imax,4))
-    for i,(x,y) in enumerate(zip(targetTrajX,targetTrajY)):
-        angles = armAnglesEnd((x,y))
-        if i<100: print (i,angles,anglesOld)
-        dangles = (angles - anglesOld) / dtpts
-        stateTraj[i,:] = np.array((angles[0],angles[1],dangles[0],dangles[1]))
-        anglesOld = angles
-        
-    print (stateTraj)
+    cubictime = np.fromfunction(lambda t:(t/np.float(intermediate_pts_per_line//2))**3,
+                                                    (intermediate_pts_per_line//2,))
+    for i,(x,y) in enumerate(crudeTargetTraj[:-1]):
+        xnext,ynext = crudeTargetTraj[i+1,:]
+        targetTrajX = np.append( np.append(x + (xnext-x)/2.0*cubictime, [(x+xnext)/2.]),
+                                    xnext - (xnext-x)/2.0*cubictime[::-1] )
+        targetTrajY = np.append( np.append(y + (ynext-y)/2.0*cubictime, [(y+ynext)/2.]),
+                                    ynext - (ynext-y)/2.0*cubictime[::-1] )
+
+        for j,(subx,suby) in enumerate(zip(targetTrajX,targetTrajY)):
+            angles = armAnglesEnd((subx,suby))
+            dangles = (angles - anglesOld) / dtpts
+            stateTraj[i*intermediate_pts_per_line+j,:] = np.array((angles[0],angles[1],dangles[0],dangles[1]))
+            anglesOld = np.array(angles)
+
     print ("Total time =",Tmax,"s.")
     #targetTraj = list(zip(targetTrajX,targetTrajY))        # in python3, zip() returns an iterator, hence list()
     varFactors = (1./2.5,1./2.5,0.05,0.05,0.02,0.02)        # angleFactors, velocityFactors, torqueFactors
@@ -105,9 +112,10 @@ elif bot == 'acrobot_2link':
     animdt = 0.2                                            # time step for an action
 
 trange = np.arange(0,Tmax,dtpts)
-print ("Saving to",botname+"_traj_"+task+".shelve")
+saveFilename = botname+"_traj_v2_"+task+".shelve"
+print ("Saving to",saveFilename)
 with contextlib.closing(
-        shelve.open(botname+"_traj_"+task+".shelve", 'c', protocol=-1)
+        shelve.open(saveFilename, 'c', protocol=-1)
         ) as data_dict:
     data_dict['trange'] = trange
     data_dict['ratorOut'] = np.zeros(Imax)                  # true torque sent to arm is unknown
@@ -116,7 +124,7 @@ with contextlib.closing(
     data_dict['rateEvolve'] = stateTraj*varFactors[:4]      # desired arm trajectory
 
 plt.figure()
-plt.scatter(targetTrajX,targetTrajY)
+plt.plot(*zip(*crudeTargetTraj))
 plt.figure()
 plt.scatter(stateTraj[:,0]*varFactors[0],stateTraj[:,1]*varFactors[1])
 plt.figure()
