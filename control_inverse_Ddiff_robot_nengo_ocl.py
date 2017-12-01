@@ -58,11 +58,11 @@ funcType = 'robot2_todorov_gravity'     # if learnFunction, then robot two-link 
 
 #pathprefix = '/lcncluster/gilra/tmp/'
 pathprefix = '../data/'
-weightsLoadFileName = 'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_60000.0s_endweights.shelve'
+weightsLoadFileName = 'inverse_Ddiff_ff_40ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_100.0s_endweights.shelve'
 #trajectoryFileName = 'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom3000.0_seed2by0.3RLSwing_10.0s_start'
 #trajectoryFileName = 'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLReach3_10.0s_start'
-#trajectoryFileName = 'robot2_todorov_gravity_traj_v2_star'
-trajectoryFileName = 'robot2_todorov_gravity_traj_v2_diamond'
+trajectoryFileName = 'robot2_todorov_gravity_traj_v2_star'
+#trajectoryFileName = 'robot2_todorov_gravity_traj_v2_diamond'
 weightsLoadFileName = pathprefix + weightsLoadFileName
 trajectoryFileName = pathprefix + trajectoryFileName
 
@@ -168,7 +168,7 @@ Tclamp = 0.25                                           # time to clamp the ref,
 if errorLearning:
     errorAverage = False                    # whether to average error over the Tperiod scale
                                             # Nopes, this won't make it learn the intricate dynamics
-    errorFeedbackGain = 3.                  # Feedback gain
+    errorFeedbackGain = 4.#10.                 # Feedback gain
                                             # below a gain of ~5, exc rates go to max, weights become large
     weightErrorTau = 10*tau                 # filter the error to the PES weight update rule
     errorFeedbackTau = 2*tau                # synaptic tau for the error signal into layer2.ratorOut
@@ -219,7 +219,7 @@ def evolveState(u):
 #plt.show()
 #sys.exit()
 
-dataFileName = trajectoryFileName+'_diff-ff_gain'+str(errorFeedbackGain)+'_control'
+dataFileName = trajectoryFileName+'_Ddiff-ff_gain'+str(errorFeedbackGain)+'_control'
 print('data will be saved to', dataFileName+'.shelve')
 
 if __name__ == "__main__":
@@ -231,15 +231,11 @@ if __name__ == "__main__":
     with mainModel:
         nodeIn = nengo.Node(desiredStateFn)                             # reference state evolution
         nodeInD = nengo.Node(lambda t: desiredStateFn(t-0.025))         # delayed reference state evolution
-        nodeInTarget = nengo.Node(lambda t: desiredStateFn(t-0.05))     # target for error feedback (even more delayed) reference state evolution
-        # input layer from which feedforward weights to ratorOut are computed
-        ratorIn = nengo.Ensemble( Nexc, dimensions=Nobs, radius=reprRadiusIn,
-                            neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
-        ratorInD = nengo.Ensemble( Nexc, dimensions=Nobs, radius=reprRadiusIn,
-                            neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
-        nengo.Connection(nodeIn, ratorIn, synapse=None)
-        nengo.Connection(nodeInD, ratorInD, synapse=None)
-                                                                # No filtering here as no filtering/delay in the plant/arm
+        stateIn = nengo.Node(size_in=Nobs)                              # reference state + fedback error
+        stateInD = nengo.Node(size_in=Nobs)                             # reference state + fedback error
+        nengo.Connection(nodeIn, stateIn)
+        nengo.Connection(nodeInD, stateInD)
+        nodeInTarget = nengo.Node(lambda t: desiredStateFn(t-0.025-tau))# target for error feedback (even more delayed) reference state evolution
         # layer with learning incorporated
         #intercepts = np.append(np.random.uniform(-0.2,0.2,size=Nexc//2),np.random.uniform(-1.,1.,size=Nexc//2))
         ratorOut = nengo.Ensemble( Nexc, dimensions=N//2, radius=reprRadius,
@@ -248,13 +244,13 @@ if __name__ == "__main__":
         #  else they seem to be all evaluated at the same values of low-dim variables
         #  causing seed-dependent convergence issues possibly due to similar frozen noise across connections
                 
-        EtoE = nengo.Connection(ratorInD.neurons, ratorOut.neurons,
-                                    transform=np.zeros((Nexc,Nexc)), synapse=tau)
+        EtoE = nengo.Connection(stateIn, ratorOut.neurons,
+                                    transform=np.zeros((Nexc,Nobs)), synapse=tau)
 
         # make InEtoE connection after EtoE, so that reprRadius from EtoE
         #  instead of reprRadiusIn from InEtoE is used to compute decoders for ratorOut
-        InEtoE = nengo.Connection(ratorIn.neurons, ratorOut.neurons,
-                                    transform=np.zeros((Nexc,Nexc)), synapse=tau)
+        InEtoE = nengo.Connection(stateInD, ratorOut.neurons,
+                                    transform=np.zeros((Nexc,Nobs)), synapse=tau)
         
         error = nengo.Node( size_in=Nobs, output = lambda timeval,err: err )
         # Error = x_desired - x_true
@@ -284,10 +280,10 @@ if __name__ == "__main__":
         ###
         ### feed the error back to force output to follow the input ###
         ###
-        errorFeedbackConn = nengo.Connection(error,ratorIn,\
+        errorFeedbackConn = nengo.Connection(error,stateIn,\
                                             synapse=errorFeedbackTau,\
                                             transform=-errorFeedbackGain)
-        errorFeedbackConnD = nengo.Connection(error,ratorInD,\
+        errorFeedbackConnD = nengo.Connection(error,stateInD,\
                                             synapse=errorFeedbackTau+tau,\
                                             transform=-errorFeedbackGain)
 

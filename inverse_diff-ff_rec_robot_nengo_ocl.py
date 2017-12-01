@@ -63,7 +63,7 @@ testLearnedOn = '_seed2by0.3amplVaryHeights'
 #testLearnedOn = '__'                    # doesn't load any weights if file not found! use with initLearned say.
                                         # the string of inputType and trialClamp used for learning the to-be-tested system 
 saveSpikes = True                       # save spikes if testLearned and saveSpikes
-continueLearning = True#False                # whether to load old weights and continue learning from there
+continueLearning = False                # whether to load old weights and continue learning from there
                                         # doesn't work, maybe save error state, also confirm same encoders/decoders?
                                         # saving weights at the end is always enabled
 zeroLowWeights = False                  # set to zero weights below a certain value
@@ -88,7 +88,7 @@ seedR2 = 4              # another seed for the second layer
                         # as I possibly don't have enough neurons
                         # to tile the input properly (obsolete -- for high dim)
 seedR4 = 5              # for the nengonetexpect layer to generate reference signal
-seedRin = 4#2
+seedRin = 2
 np.random.seed([seedRin])# this seed generates the inpfn below (and non-nengo anything random)
 
 tau = 0.02              # second, synaptic tau
@@ -198,7 +198,7 @@ else:
 ###
 if errorLearning:                                       # PES plasticity on
     Tmax = 10000.                                       # second - how long to run the simulation
-    continueTmax = 20000.                               # if continueLearning, then start with weights from continueTmax
+    continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
     reprRadiusIn = 0.2                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
     if recurrentLearning:                               # L2 recurrent learning
@@ -396,7 +396,7 @@ else:
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
         ('_seed'+str(seedRin)+'by'+str(inputreduction)+inputType if inputType != 'rampLeave' else '')
-baseFileName = pathprefix+'inverse_diff_ff_rec_40ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_diff-ff_rec_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
@@ -532,8 +532,8 @@ if __name__ == "__main__":
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
         rateEvolve = nengo.Node(rateEvolveFn)                   # reference state evolution
-        rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.02))# delayed reference state evolution
-        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.04)*varFactors[Nobs:] )
+        rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.025))# delayed reference state evolution
+        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.05)*varFactors[Nobs:] )
                                                                 # reference input torque evolution
                                                                 # scale input to network by torque factors
         # input layer from which feedforward weights to ratorOut are computed
@@ -561,12 +561,14 @@ if __name__ == "__main__":
             nengo.Connection(endTrialClamp,ratorOut.neurons,synapse=1e-3)
                                                                     # fast synapse for fast-reacting clamp
         
-        EtoE = nengo.Connection(ratorInD.neurons, ratorOut.neurons,
-                                    transform=Wdyn2/20., synapse=tau)   # synapse is tau_syn for filtering
+        EtoE = nengo.Connection(ratorOut.neurons, ratorOut.neurons,
+                                    transform=Wdyn2, synapse=tau)   # synapse is tau_syn for filtering
 
         # make InEtoE connection after EtoE, so that reprRadius from EtoE
         #  instead of reprRadiusIn from InEtoE is used to compute decoders for ratorOut
         InEtoE = nengo.Connection(ratorIn.neurons, ratorOut.neurons,
+                                    transform=Wdyn2/20., synapse=tau)
+        InEtoED = nengo.Connection(ratorInD.neurons, ratorOut.neurons,
                                     transform=Wdyn2/20., synapse=tau)
                                                                     # Wdyn2 same as for EtoE, but mean(InEtoE) = mean(EtoE)/20
 
@@ -662,6 +664,7 @@ if __name__ == "__main__":
                                             #decay_rate_x_dt=excPES_weightsDecayRate*dt,
                                             #integral_tau=excPES_integralTau) }
             InEtoE.learning_rule_type = InEtoERulesDict
+            InEtoED.learning_rule_type = InEtoERulesDict
 
             if trialClamp:
                 # if trialClamp just forcing error to zero doesn't help, as errorWt decays at long errorWeightTau,
@@ -752,6 +755,8 @@ if __name__ == "__main__":
                                 = weights_dict['learnedWeights']                    # can be set if weights/decoders are plastic
             sim.signals[ sim.model.sig[InEtoE]['weights'] ] \
                                 = weights_dict['learnedInWeights']                  # can be set if weights/decoders are plastic
+            sim.signals[ sim.model.sig[InEtoED]['weights'] ] \
+                                = weights_dict['learnedInDWeights']                  # can be set if weights/decoders are plastic
     else:
         print('Not loading any pre-learned weights.')
 
@@ -917,6 +922,7 @@ if __name__ == "__main__":
             #weights_dict['learnedWeights'] = sim.data[plasticConnEE].weights
                                                                         # this only saves the initial weights
             weights_dict['learnedInWeights'] = sim.signals[ sim.model.sig[InEtoE]['weights'] ]
+            weights_dict['learnedInDWeights'] = sim.signals[ sim.model.sig[InEtoED]['weights'] ]
             weights_dict['learnedWeights'] = sim.signals[ sim.model.sig[plasticConnEE]['weights'] ]
                                                                         # this is the signal updated by operator-s set by the learning rule
         print('saved end weights to',weightsSaveFileName)

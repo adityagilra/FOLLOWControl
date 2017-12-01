@@ -2005,20 +2005,20 @@ def anim_robot_noref(dataFileName,endTag='_start'):         # no need of delay h
 
 def fig_control_nips(controlFileNames):
     fig = plt.figure(facecolor='w',figsize=(columnwidth, columnwidth),dpi=fig_dpi)
-    ax1 = plt.subplot2grid((2,6),(0,0),rowspan=1,colspan=3,zorder=1)
-    ax2 = plt.subplot2grid((2,6),(0,3),rowspan=1,colspan=3,zorder=1)
-    ax3 = plt.subplot2grid((2,6),(1,0),rowspan=1,colspan=3,xlim=(-0.01,0.5),ylim=(-0.65,-0.2))
+    ax1 = plt.subplot2grid((3,6),(0,0),rowspan=1,colspan=3,zorder=1)
+    ax2 = plt.subplot2grid((3,6),(0,3),rowspan=1,colspan=3,zorder=1)
+    ax3 = plt.subplot2grid((3,6),(1,0),rowspan=1,colspan=3,xlim=(-0.01,0.5),ylim=(-0.65,-0.2))
     ax=[[],[]]
-    ax[0].append( plt.subplot2grid((2,6),(1,0),rowspan=1,colspan=2,xlim=(-0.05,0.3),ylim=(-0.65,0.1)) )
-    ax[0].append( plt.subplot2grid((2,6),(1,2),rowspan=1,colspan=2,xlim=(-0.05,0.3),ylim=(-0.65,0.1)) )
-    ax[0].append( plt.subplot2grid((2,6),(1,4),rowspan=1,colspan=2,xlim=(-0.05,0.3),ylim=(-0.65,0.1)) )
-    #ax[1].append( plt.subplot2grid((3,6),(2,0),rowspan=1,colspan=2,xlim=(-0.05,0.25),ylim=(-0.65,-0.1)) )
-    #ax[1].append( plt.subplot2grid((3,6),(2,2),rowspan=1,colspan=2,xlim=(-0.05,0.25),ylim=(-0.65,-0.1)) )
-    #ax[1].append( plt.subplot2grid((3,6),(2,4),rowspan=1,colspan=2,xlim=(-0.05,0.25),ylim=(-0.65,-0.1)) )
+    ax[0].append( plt.subplot2grid((3,6),(1,0),rowspan=1,colspan=2,xlim=(-0.05,0.3),ylim=(-0.65,0.1)) )
+    ax[0].append( plt.subplot2grid((3,6),(1,2),rowspan=1,colspan=2,xlim=(-0.05,0.3),ylim=(-0.65,0.1)) )
+    ax[0].append( plt.subplot2grid((3,6),(1,4),rowspan=1,colspan=2,xlim=(-0.05,0.3),ylim=(-0.65,0.1)) )
+    ax[1].append( plt.subplot2grid((3,6),(2,0),rowspan=1,colspan=2,xlim=(-0.05,0.25),ylim=(-0.65,-0.1)) )
+    ax[1].append( plt.subplot2grid((3,6),(2,2),rowspan=1,colspan=2,xlim=(-0.05,0.25),ylim=(-0.65,-0.1)) )
+    ax[1].append( plt.subplot2grid((3,6),(2,4),rowspan=1,colspan=2,xlim=(-0.05,0.25),ylim=(-0.65,-0.1)) )
     print('reading primary data from',datapath+controlFileNames[0][0]+'.shelve')
     # with ensures that the file is closed at the end / if error
     with contextlib.closing(
-            shelve.open(datapath+controlFileNames[0][1]+'.shelve', 'r')
+            shelve.open(datapath+controlFileNames[1][1]+'.shelve', 'r')
             ) as data_dict:
         trange = data_dict['trange']
         yExpect = data_dict['ratorOut']             # desired trajectory
@@ -2028,7 +2028,7 @@ def fig_control_nips(controlFileNames):
         true_torque = data_dict['trueTorque']       # true torque
 
     ax1.plot(trange,torqueOut,color='r',lw=plot_linewidth)
-    ax1.set_ylim((-.1,.1))
+    ax1.set_ylim((-.2,.2))
     ax1.get_xaxis().get_major_formatter().set_useOffset(False)
     beautify_plot(ax1,x0min=False,y0min=False)
     axes_labels(ax1,'time (s)','$\hat{u}_{1,2}$',xpad=-3,ypad=-3)
@@ -2041,7 +2041,7 @@ def fig_control_nips(controlFileNames):
     beautify_plot(ax2,x0min=False,y0min=False)
     axes_labels(ax2,'time (s)','$x^D_{2,4}; x_{2,4}$',xpad=-3,ypad=-3)
 
-    for i in range(1):
+    for i in range(2):
         for j in range(2):
             N, Ncoords, get_robot_position, xextent, yextent = get_robot_func(controlFileNames[i][j])
             dt, trange, u, uref, y2, yExpect, varFactors, Tperiod, task, target = get_robot_data(controlFileNames[i][j],'')
@@ -2065,15 +2065,20 @@ def fig_control_nips(controlFileNames):
             beautify_plot(ax[i][j+1],x0min=False,y0min=False,xticks=[],yticks=[],drawxaxis=False,drawyaxis=False)
             axes_labels(ax[i][j+1],('open-loop','closed loop')[j],'',xpad=-3,ypad=-3)
 
-    ax1.text(0.05, 0.93, 'A', transform=fig.transFigure)
-    ax1.text(0.52, 0.93, 'B', transform=fig.transFigure)
-    ax1.text(0.05, 0.4, 'C', transform=fig.transFigure)
+    ax1.text(0.03, 0.93, 'A', transform=fig.transFigure)
+    ax1.text(0.51, 0.93, 'B', transform=fig.transFigure)
+    ax1.text(0.03, 0.6, 'C', transform=fig.transFigure)
+    ax1.text(0.03, 0.3, 'D', transform=fig.transFigure)
 
     fig.tight_layout()
     fig.savefig('figures/fig_control_inverse.pdf',dpi=fig_dpi)
     print("done saving figure for control")
 
-def fig_inverse_nips(dataFileName,testFileName):
+def fig_inverse_nips(dataFileNames,testFileName,savetag,addtime=0):
+    if isinstance(dataFileNames, (list,tuple)):
+        dataFileNameStart = dataFileNames[0]
+        dataFileNameEnd = dataFileNames[1]
+    else: dataFileNameStart = dataFileNameEnd = dataFileNames
     fig = plt.figure(facecolor='w',figsize=(2*columnwidth, columnwidth),dpi=fig_dpi)
     #figlen = 6
     #N,plotvar = 2,1
@@ -2091,14 +2096,15 @@ def fig_inverse_nips(dataFileName,testFileName):
     # error and spiking
     ax5 = plt.subplot(2,3,3)
     ax6 = plt.subplot(2,3,6)
-    for i,(dataFileNameHere,endTag,axA,axB) in enumerate([(dataFileName,'_start',ax1,ax3),\
-                                                        (dataFileName,'_end',ax2,ax4),
+    for i,(dataFileNameHere,endTag,axA,axB) in enumerate([(dataFileNameStart,'_start',ax1,ax3),\
+                                                        (dataFileNameEnd,'_end',ax2,ax4),
                                                         (testFileName,'_start',ax5,ax6)]):
         with contextlib.closing(
                 shelve.open(datapath+dataFileNameHere+endTag+'.shelve', 'r')
                 ) as data_dict:
 
             trange = data_dict['trange']
+            if i==1: trange += addtime
             Tperiod = data_dict['Tperiod']
             dt = data_dict['dt']
             yExpect = data_dict['rateEvolve']               # true trajectory
@@ -2207,9 +2213,158 @@ def fig_inverse_nips(dataFileName,testFileName):
                                         fontsize=label_fontsize, color='r')
     fig.subplots_adjust(top=0.9,left=0.1,right=0.95,bottom=0.1,hspace=0.5,wspace=0.5)
 
-    fig.savefig('figures/fig_inverse.pdf',dpi=fig_dpi)
+    fig.savefig('figures/fig_inverse'+savetag+'.pdf',dpi=fig_dpi)
     print("done saving figure for inverse model")
     
+def fig_inverse_nips_both(dataFileName_rec,testFileName_rec,dataFileName_dff,testFileName_dff):
+    fig = plt.figure(facecolor='w',figsize=(2*columnwidth, 2*columnwidth),dpi=fig_dpi)
+    #figlen = 6
+    #N,plotvar = 2,1
+    #axlist_start = [plt.subplot2grid((figlen,9),(i*2,0),rowspan=2,colspan=3) for i in range(3)]
+    #plot_learnt_data(axlist_start,dataFileName+'_start.shelve',N=N,errFactor=1,plotvars=[plotvar])
+    #axlist_end = [plt.subplot2grid((figlen,9),(i*2,3),rowspan=2,colspan=3) for i in range(3)]
+    #plot_learnt_data(axlist_end,dataFileName+'_end.shelve',N=N,errFactor=1,plotvars=[plotvar],addTime=addTime)
+    #axlist_test = [plt.subplot2grid((figlen,9),(i*2,6),rowspan=2,colspan=3) for i in range(3)]
+    #plot_learnt_data(axlist_test,testFileName+'_start.shelve',N=N,errFactor=1,plotvars=[plotvar],phaseplane=True)
+
+    ax1 = plt.subplot(3,3,1)
+    ax2 = plt.subplot(3,3,2)
+    ax3 = plt.subplot(3,3,4)
+    ax4 = plt.subplot(3,3,5)
+    ax5 = plt.subplot(3,3,3)
+    ax6 = plt.subplot(3,3,6)
+    ax7 = plt.subplot(3,3,7)
+    ax8 = plt.subplot(3,3,8)
+    ax9 = plt.subplot(3,3,9)
+    # one column in each iteration
+    for i,(dataFileName1Here,dataFileName2Here,endTag,axA,axB,axC) \
+                in enumerate([(dataFileName_rec,dataFileName_dff,'_start',ax1,ax3,ax7),\
+                            (dataFileName_rec,dataFileName_dff,'_end',ax2,ax4,ax8),\
+                            (testFileName_rec,testFileName_dff,'_start',ax5,ax6,ax9)]):
+        with contextlib.closing(
+                shelve.open(datapath+dataFileName1Here+endTag+'.shelve', 'r')
+                ) as data_dict:
+
+            trange = data_dict['trange']
+            Tperiod = data_dict['Tperiod']
+            dt = data_dict['dt']
+            yExpect = data_dict['rateEvolve']               # true trajectory
+            varFactors = data_dict['varFactors']
+            torqueOut = data_dict['ratorOut2']              # torque inferred by inverse network
+            true_torque = data_dict['ratorOut']             # true torque
+
+        axA.plot(trange,yExpect)                            # yExpect is as long as trange, even for _end
+        if endTag == '_end':
+            trange=trange[-int((5*Tperiod)/dt):]
+        axB.plot(trange,true_torque[:,1],color='b')
+        axB.plot(trange,torqueOut[:,1],color='r')
+
+        # dff should have exactly the same trange and state input as rec above! not loading again!
+        with contextlib.closing(
+                shelve.open(datapath+dataFileName2Here+endTag+'.shelve', 'r')
+                ) as data_dict:
+            torqueOut = data_dict['ratorOut2']              # torque inferred by inverse network
+
+        axC.plot(trange,true_torque[:,1],color='b')
+        axC.plot(trange,torqueOut[:,1],color='r')
+
+        for ax in (axA,axB,axC):
+            if i in (0,2):
+                ax.set_xlim((0,2*Tperiod))
+            else:
+                ax.set_xlim((trange[-1]-5*Tperiod,trange[-1]-3*Tperiod))
+
+            ax.get_xaxis().get_major_formatter().set_useOffset(False)
+
+    for i in range(3):
+        # set y limits of start and end plots to the outermost values of the two
+        ylim1 = (ax1,ax3,ax7)[i].get_ylim()
+        ylim2 = (ax2,ax4,ax8)[i].get_ylim()
+        ylim3 = (ax5,ax6,ax9)[i].get_ylim()
+        ylim_min = np.min((ylim1[0],ylim2[0],ylim3[0]))
+        ylim_max = np.max((ylim1[1],ylim2[1],ylim3[1]))
+        (ax1,ax3,ax7)[i].set_ylim(ylim_min,ylim_max)
+
+        # vertical line to mark end of learning
+        xlim = (ax1,ax3,ax7)[i].get_xlim()
+        xmid = xlim[0]+(xlim[1]-xlim[0])*0.5
+        (ax1,ax3,ax7)[i].plot([xmid,xmid],[ylim_min,ylim_max],color='r',linewidth=plot_linewidth)
+        # vertical line to mark start of error feedback
+        xlim = (ax2,ax4,ax8)[i].get_xlim()
+        xmid = xlim[0]+(xlim[1]-xlim[0])*0.5
+        (ax2,ax4,ax8)[i].plot([xmid,xmid],[ylim_min,ylim_max],color='r',linewidth=plot_linewidth)
+        add_x_break_lines((ax1,ax3,ax7)[i],(ax2,ax4,ax8)[i],jutOut=0.2) # jutOut is half-length between x-axis in axes coordinates i.e. (0,1)
+
+    for i,ax in enumerate([ax1,ax2,ax5,ax3,ax4,ax6,ax7,ax8,ax9]):
+        beautify_plot(ax,x0min=False,y0min=False)
+        if i in (0,1,2,3,4,5): xlabelsOff = True
+        else: xlabelsOff = False
+        if i in (1,2,4,5,7,8): ylabelsOff = True
+        else: ylabelsOff = False
+        axes_off(ax,xlabelsOff,ylabelsOff)
+    axes_labels(ax7,'time (s)','$\hat{u},u$',xpad=-3,ypad=-3)
+    axes_labels(ax8,'time (s)','',xpad=-3,ypad=-3)
+    axes_labels(ax9,'time (s)','',xpad=-3,ypad=-3)
+    axes_labels(ax1,'','$x$',xpad=-3,ypad=-3)
+    axes_labels(ax3,'','$\hat{u},u$',xpad=-3,ypad=-3)
+
+    ## error evolution - full time
+    #plot_error_fulltime(ax5,dataFileName)
+    #beautify_plot(ax5,x0min=False,y0min=False)
+    #axes_labels(ax5,'time (s)','$\langle err^2 \\rangle_{N_d,t}$',xpad=-6,ypad=-1)
+    #ax5.set_xlim([-100,ax5.get_xlim()[1]])
+
+    ## weight distribution - no learned weights in the file!
+    #plot_current_weights([None,ax6],dataFileName,\
+    #                                wtFactor=1000,wtHistFact=500)
+    #beautify_plot(ax6,x0min=False,y0min=False)
+    #axes_labels(ax6,'weight (arb)','density',xpad=-6,ypad=-5)
+
+    ## spikes from 0.5 to 0.5+0.75 -- too high rates here
+    ## with ensures that the file is closed at the end / if error
+    #with contextlib.closing(
+    #        shelve.open(datapath+testFileName+'_start.shelve', 'r')
+    #        ) as data_dict:
+    #
+    #    trange = data_dict['trange']
+    #    if 'EspikesOut2' in data_dict.keys():
+    #        EspikesOut = data_dict['EspikesOut2']
+    #tstart = 0.5
+    #rasterplot(ax6,trange,tstart,tstart+0.25,EspikesOut,range(40,60),sort=False)
+    #beautify_plot(ax6,x0min=False,y0min=False)
+    #axes_labels(ax6,'time (s)','neuron #',xpad=-3,ypad=-3)
+
+    ax1.text(0.015, 0.89, 'A', transform=fig.transFigure)
+    ax1.text(0.015, 0.45, 'B', transform=fig.transFigure)
+    #ax1.text(0.66, 0.89, 'Aii', transform=fig.transFigure)
+    #ax1.text(0.66, 0.45, 'Bii', transform=fig.transFigure)
+    ax2.text(0.08, 0.48, 'feedback off', transform=fig.transFigure,\
+                                    fontsize=label_fontsize, color='r')
+    ax2.text(0.202, 0.48, '|', transform=fig.transFigure,\
+                                    fontsize=label_fontsize, color='r')
+    ax2.text(0.215, 0.48, 'feedback on', transform=fig.transFigure,\
+                                    fontsize=label_fontsize, color='r')
+    # the Axes to which each text is attached is irrelevant, as I'm using figure coords
+    ax1.text(0.31, 0.96, 'Learning', transform=fig.transFigure)
+    ax1.text(0.197, 0.93, '|', color='r', transform=fig.transFigure, fontsize=25)
+    ax1.text(0.25, 0.92, 'start', transform=fig.transFigure)
+    ax1.text(0.43, 0.92, 'end', transform=fig.transFigure)
+    ax1.text(0.515, 0.93, '|', color='r', transform=fig.transFigure, fontsize=25)
+    ax1.text(0.64, 0.96, 'Testing', transform=fig.transFigure)
+    ax1.text(0.54, 0.92, 'noise', transform=fig.transFigure)
+    ax1.text(0.8, 0.92, 'structured', transform=fig.transFigure)
+    ax2.text(0.41, 0.48, 'feedback on', transform=fig.transFigure,\
+                                        fontsize=label_fontsize, color='r')
+    ax2.text(0.522, 0.48, '|', transform=fig.transFigure,\
+                                        fontsize=label_fontsize, color='r')
+    ax2.text(0.53, 0.48, 'feedback off', transform=fig.transFigure,\
+                                        fontsize=label_fontsize, color='r')
+    ax2.text(0.78, 0.48, 'feedback off', transform=fig.transFigure,\
+                                        fontsize=label_fontsize, color='r')
+    fig.subplots_adjust(top=0.9,left=0.1,right=0.95,bottom=0.1,hspace=0.5,wspace=0.5)
+
+    fig.savefig('figures/fig_inverse_both.pdf',dpi=fig_dpi)
+    print("done saving figure for inverse model")
 
 def plot_spiking(testFileName):
     # with ensures that the file is closed at the end / if error
@@ -2458,16 +2613,26 @@ if __name__ == "__main__":
     # NIPS: plot / animate the inverse control output:
     ## 10000s is worse than 3000s (see my notes)
     ##anim_robot('inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLReach3_10.0s_control',endTag='',delay=0.1)
-    #anim_robot_noref('robot2_todorov_gravity_traj_write_f_control',endTag='')
-    #anim_robot_noref('robot2_todorov_gravity_traj_star_control',endTag='')
-    #anim_robot_noref('robot2_todorov_gravity_traj_v2_diamond_gain0.0_control',endTag='')
-    #anim_robot_noref('robot2_todorov_gravity_traj_v2_diamond_diff-ff_gain4.0_control',endTag='')
-    anim_robot_noref('robot2_todorov_gravity_traj_v2_star_diff-ff_gain4.0_control',endTag='')
-    #fig_control_nips([['robot2_todorov_gravity_traj_diamond_gain0.0_control',
-    #                    'robot2_todorov_gravity_traj_diamond_gain1.0_control'],
-    #                 ['robot2_todorov_gravity_traj_star_gain0.0_control',
-    #                    'robot2_todorov_gravity_traj_star_gain1.0_control']])
-    #fig_inverse_nips('inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_3000.0s',
-    #                'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom3000.0_seed2by0.3RLSwing_10.0s')
+    ##anim_robot_noref('robot2_todorov_gravity_traj_write_f_control',endTag='')
+    #anim_robot_noref('robot2_todorov_gravity_traj_v2_diamond_gain3.0_control',endTag='')
+    #anim_robot_noref('robot2_todorov_gravity_traj_v2_star_gain3.0_control',endTag='')
+    #anim_robot_noref('robot2_todorov_gravity_traj_v2_diamond_diff-ff_gain3.0_control',endTag='')
+    #anim_robot_noref('robot2_todorov_gravity_traj_v2_star_diff-ff_gain3.0_control',endTag='')
+    #fig_control_nips([['robot2_todorov_gravity_traj_v2_diamond_diff-ff_gain0.0_control',
+    #                    'robot2_todorov_gravity_traj_v2_diamond_diff-ff_gain3.0_control'],
+    #                 ['robot2_todorov_gravity_traj_v2_star_diff-ff_gain0.0_control',
+    #                    'robot2_todorov_gravity_traj_v2_star_diff-ff_gain3.0_control']])
+    ## inverse model with only recurrent learning -- NIPS obsolete
+    ##fig_inverse_nips('inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_3000.0s',
+    ##                'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom3000.0_seed2by0.3RLSwing_10.0s')
+    # inverse model with only recurrent learning
+    #fig_inverse_nips('inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s',
+    #                'inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom4000.0_seed2by0.3RLSwing_10.0s',
+    #                '_rec')
+    # inverse model with only diff-ff learning
+    fig_inverse_nips(('inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
+                    'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_continueFrom50000.0_seed7by0.3amplVaryHeights_10000.0s'),
+                    'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom60000.0_seed2by0.3RLSwing_10.0s',
+                    '_diff-ff',50000)
     
     #plt.show()     # don't use this when running anim_robot() - gives a weird large interactive slow plot

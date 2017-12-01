@@ -58,10 +58,11 @@ funcType = 'robot2_todorov_gravity'     # if learnFunction, then robot two-link 
 
 #pathprefix = '/lcncluster/gilra/tmp/'
 pathprefix = '../data/'
-weightsLoadFileName = 'inverse_rep_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed3by0.3amplVaryHeights_3000.0s_endweights.shelve'
+weightsLoadFileName = 'inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s_endweights.shelve'
+#weightsLoadFileName = 'inverse_rep_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed3by0.3amplVaryHeights_4000.0s_endweights.shelve'
 #trajectoryFileName = 'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom3000.0_seed2by0.3RLSwing_10.0s_start'
 #trajectoryFileName = 'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLReach3_10.0s_start'
-#trajectoryFileName = 'robot2_todorov_gravity_traj_star'
+#trajectoryFileName = 'robot2_todorov_gravity_traj_v2_star'
 trajectoryFileName = 'robot2_todorov_gravity_traj_v2_diamond'
 weightsLoadFileName = pathprefix + weightsLoadFileName
 trajectoryFileName = pathprefix + trajectoryFileName
@@ -168,7 +169,7 @@ Tclamp = 0.25                                           # time to clamp the ref,
 if errorLearning:
     errorAverage = False                    # whether to average error over the Tperiod scale
                                             # Nopes, this won't make it learn the intricate dynamics
-    errorFeedbackGain = 1.#10.                 # Feedback gain
+    errorFeedbackGain = 3.                  # Feedback gain
                                             # below a gain of ~5, exc rates go to max, weights become large
     weightErrorTau = 10*tau                 # filter the error to the PES weight update rule
     errorFeedbackTau = 1*tau                # synaptic tau for the error signal into layer2.ratorOut
@@ -230,6 +231,7 @@ if __name__ == "__main__":
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
         nodeIn = nengo.Node( size_in=Nobs, output = lambda timeval,currval: desiredStateFn(timeval) )
+        nodeInTarget = nengo.Node( size_in=Nobs, output = lambda timeval,currval: desiredStateFn(timeval-0.05) )
         ratorOut = nengo.Ensemble( Nexc, dimensions=Nobs+N//2, radius=reprRadius, \
                                     neuron_type=nengo.neurons.LIF(), seed=seedR2, label='ratorOut')
         # don't use the same seeds across the connections,
@@ -252,7 +254,7 @@ if __name__ == "__main__":
         ###
         ### Add the x_desired and x_true connections to the error ensemble ###
         ###
-        stateDesired2error = nengo.Connection(nodeIn,error[:Nobs],\
+        stateDesired2error = nengo.Connection(nodeInTarget,error[:Nobs],\
                                                 synapse=None,transform=-np.eye(Nobs))
                                                                         # minus desired state
         # connect torque to node for filtering with tau (very important)
