@@ -118,7 +118,7 @@ def plot_data(dataFileName,endTag):
             else: tidx = int((Tnolearning+Tperiod)/dt)          # (Tnolearning + Tperiod) if Tmax allows at least one noFlush Tperiod
                                                                 # (2*Tnolearning) if Tmax doesn't allow at least one noFlush Tperiod
             trange = trange[-tidx:]                             # data only for saved period
-        y2 = data_dict['ratorOut2']
+        y2 = data_dict['ratorOut2'][-tidx:,:]
         #yinh = data_dict['inhibrator']
         #yinh2 = data_dict['inhibrator2']
         rateEvolve = data_dict['rateEvolve']
@@ -138,7 +138,7 @@ def plot_data(dataFileName,endTag):
         #                    if (t%1.0) < 0.1 else np.zeros(2)
         #plt.plot(trange, [inpfn(t) for t in trange], color='m', linewidth=1, label='u')
         if 'ratorOut' in data_dict:
-            y = data_dict['ratorOut']
+            y = data_dict['ratorOut'][-tidx:,:]
             ax.plot(trange, y, color='b', linewidth=1, label='L1')
         if 'torqueOut' in data_dict:
             ax.plot(trange, data_dict['torqueOut'], color='r', linewidth=1, label='T1')
@@ -673,7 +673,7 @@ def plot_error_fulltime(dataFileName):
         points_per_bin = int(Tperiod/dt)
         ax2.plot(trange[::points_per_bin], np.sum(err**2,axis=1).reshape((-1,points_per_bin)).mean(axis=1),\
                                             color='k', linewidth=plot_linewidth)
-        ax2.set_yscale('log')
+        #ax2.set_yscale('log')
         
         axes_labels(ax,'time (s)','error mean ('+str(NperiodsAverage)+'*Tperiod)',xpad=-6,ypad=-7)
         axes_labels(ax2,'time (s)','error$^2$',xpad=-6,ypad=3)
@@ -754,7 +754,7 @@ if __name__ == "__main__":
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_inhdecay100_excdecay100_bothTau2_PES2e-3_learn_rec_clip<0_initLearned_func_400.0s_nostim")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_gain10_inhdecay40_bothTau2_PES1e-3_learn_rec_clip<0_func_6000.0s_kickStart")
     #plot_rec_nengo_all("../data/rec_learn_data_wtf_Nexc2000_seeds0333_nodeerr_learn_rec_func_LinOsc_3000.0s")
-    plot_rec_nengo_all("../data/inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s")
+    plot_rec_nengo_all("../data/inverse_diff_ff_N200_50ms_ocl_Nexc500_softLIF_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10.0s")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_learn_ff_None_noinh_noErrFB_1200.0s_final.shelve")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_learn_ff_None_noinh_noErrFB_func_1200.0s_final.shelve")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_learn_ff_clip<0_noinh_noErrFB_400.0s_final.shelve")

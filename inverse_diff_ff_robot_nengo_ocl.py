@@ -208,12 +208,12 @@ if errorLearning:                                       # PES plasticity on
             PES_learning_rate_rec = 1e-10               # effectively no learning
             PES_learning_rate_FF = 1e-10                # effectively no learning
         else:
-            PES_learning_rate_FF = 5*2e-3                 # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
-            PES_learning_rate_rec = 5*2e-3                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+            PES_learning_rate_FF = 2e-3                 # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+            PES_learning_rate_rec = 2e-3                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
                                                         #  else weight changes cause L2 to follow ref within a cycle, not just error
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
-        Nexc = 1000                                     # number of excitatory neurons
+        Nexc = 500                                     # number of excitatory neurons
         Tperiod = 1.                                    # second
         if plastDecoders:                               # only decoders are plastic
             Wdyn2 = np.zeros(shape=(N+N//2,N+N//2))
@@ -396,7 +396,7 @@ else:
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
         ('_seed'+str(seedRin)+'by'+str(inputreduction)+inputType if inputType != 'rampLeave' else '')
-baseFileName = pathprefix+'inverse_diff_ff_eta_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_diff_ff_N200_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
@@ -537,9 +537,9 @@ if __name__ == "__main__":
                                                                 # reference input torque evolution
                                                                 # scale input to network by torque factors
         # input layer from which feedforward weights to ratorOut are computed
-        ratorIn = nengo.Ensemble( Nexc, dimensions=Nobs, radius=reprRadiusIn,
+        ratorIn = nengo.Ensemble( 200, dimensions=Nobs, radius=reprRadiusIn,
                             neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
-        ratorInD = nengo.Ensemble( Nexc, dimensions=Nobs, radius=reprRadiusIn,
+        ratorInD = nengo.Ensemble( 200, dimensions=Nobs, radius=reprRadiusIn,
                             neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
         nengo.Connection(rateEvolve, ratorIn, synapse=None)
         nengo.Connection(rateEvolveD, ratorInD, synapse=None)
@@ -562,12 +562,12 @@ if __name__ == "__main__":
                                                                     # fast synapse for fast-reacting clamp
         
         EtoE = nengo.Connection(ratorInD.neurons, ratorOut.neurons,
-                                    transform=Wdyn2/20., synapse=tau)   # synapse is tau_syn for filtering
+                                    transform=np.zeros((Nexc,200)), synapse=tau)   # synapse is tau_syn for filtering
 
         # make InEtoE connection after EtoE, so that reprRadius from EtoE
         #  instead of reprRadiusIn from InEtoE is used to compute decoders for ratorOut
         InEtoE = nengo.Connection(ratorIn.neurons, ratorOut.neurons,
-                                    transform=Wdyn2/20., synapse=tau)
+                                    transform=np.zeros((Nexc,200)), synapse=tau)
                                                                     # Wdyn2 same as for EtoE, but mean(InEtoE) = mean(EtoE)/20
 
         nodeIn_probe = nengo.Probe(nodeIn, synapse=None)

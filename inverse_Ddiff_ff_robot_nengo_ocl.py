@@ -197,7 +197,7 @@ else:
 ### recurrent and feedforward connection matrices ###
 ###
 if errorLearning:                                       # PES plasticity on
-    Tmax = 1000.                                       # second - how long to run the simulation
+    Tmax = 10000.                                       # second - how long to run the simulation
     continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
     reprRadiusIn = 0.2                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
@@ -208,12 +208,12 @@ if errorLearning:                                       # PES plasticity on
             PES_learning_rate_rec = 1e-10               # effectively no learning
             PES_learning_rate_FF = 1e-10                # effectively no learning
         else:
-            PES_learning_rate_FF = 20.#2e-3                 # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+            PES_learning_rate_FF = 0.5#2e-3                 # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
             PES_learning_rate_rec = 2e-3                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
                                                         #  else weight changes cause L2 to follow ref within a cycle, not just error
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
-        Nexc = 5000                                     # number of excitatory neurons
+        Nexc = 25000                                     # number of excitatory neurons
         Tperiod = 1.                                    # second
         if plastDecoders:                               # only decoders are plastic
             Wdyn2 = np.zeros(shape=(N+N//2,N+N//2))

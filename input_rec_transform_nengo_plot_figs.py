@@ -12,8 +12,8 @@ import os.path
 #import pickle
 import shelve, contextlib
 
-#datapath = '../lcncluster/paper_data_final/'
-datapath = '../data/'
+datapath = '../lcncluster/paper_data_final/'
+#datapath = '../data/'
 #datapath = '../data_draft4/'
 
 # set seed for selecting random weight indices
@@ -2476,10 +2476,10 @@ if __name__ == "__main__":
     #        "ff_ocl_Nexc3000_noinptau_seeds2344_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_vanderPol_trials_seed2by50.0amplVaryHeightsScaled_testFrom10000.0_seed3by50.0rampLeaveRampHeights_40.0s",
     #        wtHistFact=1,altSpikes=True)
     ## low firing rate _by2rates version with spiking rates histogram and spike rasters, no trialClamp during testing
-    #plot_fig1_2_3(["ff_ocl_Nexc3000_noinptau_by2rates_seeds2344_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_vanderPol_trials_seed2by50.0amplVaryHeightsScaled_10000.0s",
-    #                "ff_ocl_Nexc3000_noinptau_by2rates_seeds2344_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_vanderPol_trials_seed2by50.0amplVaryHeightsScaled_continueFrom40000.0_trials_seed6by50.0amplVaryHeightsScaled_10000.0s"],
-    #        "ff_ocl_Nexc3000_noinptau_by2rates_seeds2344_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_vanderPol_trials_seed2by50.0amplVaryHeightsScaled_testFrom50000.0_seed3by50.0rampLeaveRampHeights_40.0s",
-    #        wtHistFact=50,altSpikes=True)
+    ##plot_fig1_2_3(["ff_ocl_Nexc3000_noinptau_by2rates_seeds2344_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_vanderPol_trials_seed2by50.0amplVaryHeightsScaled_10000.0s",
+    ##                "ff_ocl_Nexc3000_noinptau_by2rates_seeds2344_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_vanderPol_trials_seed2by50.0amplVaryHeightsScaled_continueFrom40000.0_trials_seed6by50.0amplVaryHeightsScaled_10000.0s"],
+    ##        "ff_ocl_Nexc3000_noinptau_by2rates_seeds2344_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_vanderPol_trials_seed2by50.0amplVaryHeightsScaled_testFrom50000.0_seed3by50.0rampLeaveRampHeights_40.0s",
+    ##        wtHistFact=50,altSpikes=True)
     
     # very low firing rate _g2oR4.5 version (gain 2, reprRadius4.5, biases from (-2,2), weight error filtering at 80ms) with spiking rates histogram and spike rasters, no trialClamp during testing
     # doesn't reproduce that well at these low firing rates, so we use a better example instead of whatever comes on by chance, hard coded into function above
@@ -2630,9 +2630,11 @@ if __name__ == "__main__":
     #                'inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom4000.0_seed2by0.3RLSwing_10.0s',
     #                '_rec')
     # inverse model with only diff-ff learning
-    fig_inverse_nips(('inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
-                    'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_continueFrom50000.0_seed7by0.3amplVaryHeights_10000.0s'),
-                    'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom60000.0_seed2by0.3RLSwing_10.0s',
-                    '_diff-ff',50000)
+    #fig_inverse_nips(('inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
+    #                'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_continueFrom50000.0_seed7by0.3amplVaryHeights_10000.0s'),
+    #                'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom60000.0_seed2by0.3RLSwing_10.0s',
+    #                '_diff-ff',50000)
+    
+    #fig_inverse_compare([''])
     
     #plt.show()     # don't use this when running anim_robot() - gives a weird large interactive slow plot
