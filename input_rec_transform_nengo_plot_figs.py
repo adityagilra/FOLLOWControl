@@ -12,8 +12,8 @@ import os.path
 #import pickle
 import shelve, contextlib
 
-datapath = '../lcncluster/paper_data_final/'
-#datapath = '../data/'
+#datapath = '../lcncluster/paper_data_final/'
+datapath = '../data/'
 #datapath = '../data_draft4/'
 
 # set seed for selecting random weight indices
@@ -2441,6 +2441,61 @@ def plot_fig2suppl4(testFileName1,testFileName2):
     fig.savefig('figures/fig2_suppl4.pdf',dpi=fig_dpi)
     print("done saving figure with readout learning")
 
+def fig_inverse_compare(datafiles,file_end=''):
+    fig = plt.figure(facecolor='w',figsize=(columnwidth*2., columnwidth*2.),dpi=fig_dpi)
+
+    for num,filelist in enumerate(datafiles):
+        filebase = filelist[0]
+        ax1 = plt.subplot(6,3,6*(num//3)+num+4)
+        ax2 = plt.subplot(6,3,6*(num//3)+num+7)
+        # with ensures that the file is closed at the end / if error
+        print('Plotting ',datapath+filebase+'_end.shelve')
+        with contextlib.closing(
+                shelve.open(datapath+filebase+'_end.shelve', 'r')
+                ) as data_dict:
+
+            trange = data_dict['trange']
+            Tmax = data_dict['Tmax']
+            rampT = data_dict['rampT']
+            Tperiod = data_dict['Tperiod']
+            dt = data_dict['dt']
+            tau = data_dict['tau']
+            errorLearning = data_dict['errorLearning']
+            spikingNeurons = data_dict['spikingNeurons']
+            target = data_dict['ratorOut']
+            output = data_dict['ratorOut2']
+            err = -data_dict['error']                       # Definition of error in paper is now ref-pred, hence -ve here
+
+        tstart = int(Tperiod/dt)
+        tcut = -int(4*Tperiod/dt)
+        # plot the mean squared error, except for the start Tperiod and end 4*Tperiods, since no learning there.
+        points_per_bin = int(Tperiod/dt)
+        ax1.plot(trange[tstart:tcut:points_per_bin], \
+                    np.sum(err[tstart:tcut]**2,axis=1).reshape((-1,points_per_bin)).mean(axis=1),\
+                    color='k', linewidth=plot_linewidth)
+        ax1.set_xlim([-500,ax1.get_xlim()[1]])
+        ax1.set_yscale('log')
+        # plot the predicted x_hat and reference x
+        trange_end = trange[tcut:]                          # data only for end 4 Tperiods
+        ax2.plot(trange_end-trange_end[0], output[tcut:,1], color='r',
+                            linewidth=plot_linewidth, label=' out')
+        ax2.plot(trange_end-trange_end[0], target[tcut:,1], color='b',
+                            linewidth=plot_linewidth/1.5, label='ref')
+        # mean squared error during test, has 4 bin values for 4 Tperiods
+        mse_test = np.sum(err[tcut:]**2,axis=1).reshape((-1,points_per_bin)).mean(axis=1)
+        # write mse_test further averaged over 4 Tperiods
+        ax2.text(0.1,0.9,str(np.mean(mse_test)),
+                    transform=ax2.transAxes,
+                    color='k', fontsize=label_fontsize)
+
+        beautify_plot(ax1,x0min=False,y0min=False)
+        beautify_plot(ax2,x0min=False,y0min=False)
+        axes_labels(ax1,'time (s)','mean error$^2$',xpad=-6,ypad=3)
+        axes_labels(ax2,'time (s)','$\hat{u}_2,u_2$',xpad=-3,ypad=-3)
+    fig.tight_layout()
+    fig.savefig('figures/archi_compare'+file_end+'.pdf',dpi=fig_dpi)
+    print("done saving figure comparing architectures")
+        
 
 if __name__ == "__main__":
     # for first figure showing example spiking
@@ -2635,6 +2690,25 @@ if __name__ == "__main__":
     #                'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom60000.0_seed2by0.3RLSwing_10.0s',
     #                '_diff-ff',50000)
     
-    #fig_inverse_compare([''])
+    #fig_inverse_compare([['inverse_diff_ff_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    ['inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s'],
+    #                    ['inverse_diff-ff_rec_by10eta_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    ['inverse_Ddiff_ff_40ms_ocl_Nexc25000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    ['inverse_ff_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    ['inverse_Mdiff_ff_N100_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']])
+
+    #fig_inverse_compare(# usual 2e-3 learning rate, but note that seeRin=3 was used here, whereas 2 is the default everywhere else
+    #                    [['inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed3by0.3amplVaryHeights_10000.0s'],
+    #                    # 2e-3 / 2.5 learning rate
+    #                    ['inverse_rep_eta2_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    # 2e-3 / 25 learning rate
+    #                    ['inverse_rep_eta_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    # 2e-3 / 5 learning rate
+    #                    ['inverse_rep_eta1_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    # diff-ff net learned by FOLLOW using nengoDL and softLIFRate neurons
+    #                    ['inverse_diff_ff_N200_50ms_DLnoBP_Nexc500_softLIF_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    # diff-ff net learned by backprop using nengoDL and softLIFRate neurons
+    #                    ['inverse_diff_ff_N200_50ms_DL_Nexc500_softLIF_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']],
+    #                    file_end='_extras')
     
     #plt.show()     # don't use this when running anim_robot() - gives a weird large interactive slow plot

@@ -142,6 +142,8 @@ inputType = 'amplVaryHeights'
 #inputType = 'RLReach2'
 #inputType = 'RLReach3'
 #inputType = 'ShootWriteF'
+filterInp = True
+tauFilt = tau
 
 # N is the number of state variables in the system, N//2 is number of inputs
 # Nout is the number of observables from the system
@@ -362,6 +364,18 @@ else:
     inpfn = lambda t: 0.0*np.ones(N)*reprRadius*tau     # constant input, currently zero
     #inpfn = None                                        # zero input
 
+# any of the above inputTypes may be filtered
+if filterInp:
+    trange = np.arange(0.,Tmax,dt)
+    inpfnarray = np.array([inpfn(t) for t in trange])
+    expfilt = np.exp(-np.arange(0,tauFilt*10,dt)/tauFilt)/tauFilt       # normalized exp. decaying kernel
+    inpfnfiltarray = np.zeros((len(trange),N//2))
+    for i in range(N//2):
+        inpfnfiltarray[:,i] = np.convolve(inpfnarray[:,i],expfilt)[:len(trange)]*dt
+    inpfn = interp1d(trange,inpfnfiltarray,axis=0,
+                bounds_error=False,fill_value=np.zeros(N//2),kind='linear')
+    print('Filtering complete.')
+
 if errorLearning:
     if not weightRegularize:
         excPES_weightsDecayRate = 0.        # no decay of PES plastic weights
@@ -395,7 +409,9 @@ else:
 #pathprefix = '/lcncluster/gilra/tmp/'
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
-        ('_seed'+str(seedRin)+'by'+str(inputreduction)+inputType if inputType != 'rampLeave' else '')
+                    ('_seed'+str(seedRin)+'by'+str(inputreduction)+\
+                    inputType if inputType != 'rampLeave' else ''+\
+                    '_filt'+str(tauFilt) if filterInp else '')
 baseFileName = pathprefix+'inverse_diff_ff_N200_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \

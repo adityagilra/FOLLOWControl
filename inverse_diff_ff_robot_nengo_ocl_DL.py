@@ -201,7 +201,7 @@ else:
 ### recurrent and feedforward connection matrices ###
 ###
 if errorLearning:                                       # PES plasticity on
-    Tmax = 10000.                                       # second - how long to run the simulation
+    Tmax = 5000.                                       # second - how long to run the simulation
     continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
     reprRadiusIn = 0.2                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
@@ -216,8 +216,8 @@ if errorLearning:                                       # PES plasticity on
                 PES_learning_rate_FF = 1e-4#2e-3        # nengo 2.6.0 allows max 1e-4, while nengo 2.4.0 allows 2e-3
                 PES_learning_rate_rec = 1e-4#2e-3       # nengo 2.6.0 allows max 1e-4, while nengo 2.4.0 allows 2e-3
             else:
-                PES_learning_rate_FF = 1e-6#1e-4
-                PES_learning_rate_rec = 1e-6#1e-4
+                PES_learning_rate_FF = 1e-5#1e-4
+                PES_learning_rate_rec = 1e-5#1e-4
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
         Nexc = 500                                      # number of excitatory neurons
@@ -404,7 +404,7 @@ else:
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
         ('_seed'+str(seedRin)+'by'+str(inputreduction)+inputType if inputType != 'rampLeave' else '')
-baseFileName = pathprefix+'inverse_diff_ff_N'+str(Npre)+'_ALL_50ms'+('_DLnoBP' if noBP else '_DL')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_diff_ff_mod_N'+str(Npre)+'_50ms'+('_DLnoBP' if noBP else '_DL')+'_Nexc'+str(Nexc) + \
                     ('_softLIF' if neuron_type == 'SoftLIFRate' else '_relu') + \
                     '_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
@@ -541,7 +541,7 @@ if __name__ == "__main__":
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
         # don't train any weights via backprop, except those specified later
-        if not noBP: nengo_dl.configure_settings(trainable=True)
+        if not noBP: nengo_dl.configure_settings(trainable=False)
         rateEvolve = nengo.Node(rateEvolveFn)                   # reference state evolution
         rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.025))# delayed reference state evolution
         nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.05)*varFactors[Nobs:] )
@@ -789,6 +789,7 @@ if __name__ == "__main__":
                             rateEvolveD:np.array([[rateEvolveFn(t-0.025) for t in trangehere]])},
                     'targets' : {ratorOut_probe:np.array([[inpfn(t-0.05)*varFactors[Nobs:] for t in trangehere]])},
                     'optimizer' : optimizer, 'n_epochs' : 1 }
+
     _,_,_,_,realtimeold = os.times()
     def sim_run_flush(tFlush,nFlush):
         '''

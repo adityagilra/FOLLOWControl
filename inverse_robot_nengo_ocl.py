@@ -207,11 +207,11 @@ if errorLearning:                                       # PES plasticity on
         if testLearned:
             PES_learning_rate_rec = 1e-10               # effectively no learning
         else:
-            PES_learning_rate_rec = 2e-3/2.5                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+            PES_learning_rate_rec = 2e-3/25.                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
                                                         #  weight changes cause L2 to follow ref within a cycle, not just error
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
-        Nexc = 5000                                    # number of excitatory neurons
+        Nexc = 900                                    # number of excitatory neurons
         Tperiod = 1.                                    # second
         if plastDecoders:                               # only decoders are plastic
             Wdyn2 = np.zeros(shape=(N+N//2,N+N//2))
@@ -394,7 +394,7 @@ else:
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
         ('_seed'+str(seedRin)+'by'+str(inputreduction)+inputType if inputType != 'rampLeave' else '')
-baseFileName = pathprefix+'inverse_rep_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_rec_by25_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_directu_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
