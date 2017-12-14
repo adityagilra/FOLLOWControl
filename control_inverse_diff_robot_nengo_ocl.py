@@ -168,7 +168,7 @@ Tclamp = 0.25                                           # time to clamp the ref,
 if errorLearning:
     errorAverage = False                    # whether to average error over the Tperiod scale
                                             # Nopes, this won't make it learn the intricate dynamics
-    errorFeedbackGain = 0.#3.                  # Feedback gain
+    errorFeedbackGain = 3.                  # Feedback gain
                                             # below a gain of ~5, exc rates go to max, weights become large
     weightErrorTau = 10*tau                 # filter the error to the PES weight update rule
     errorFeedbackTau = 2*tau                # synaptic tau for the error signal into layer2.ratorOut

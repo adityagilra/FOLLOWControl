@@ -60,7 +60,6 @@ initLearned = False and recurrentLearning and not inhibition
                                         # currently implemented only for recurrent learning
 testLearned = False                     # whether to test the learning, uses weights from continueLearning, but doesn't save again.
 testLearnedOn = '_seed2by0.3amplVaryHeights'
-#testLearnedOn = '_seed3by0.3amplVaryHeights'    # new variant has seed3 by mistake
 #testLearnedOn = '__'                    # doesn't load any weights if file not found! use with initLearned say.
                                         # the string of inputType and trialClamp used for learning the to-be-tested system 
 saveSpikes = True                       # save spikes if testLearned and saveSpikes
@@ -143,8 +142,6 @@ inputType = 'amplVaryHeights'
 #inputType = 'RLReach2'
 #inputType = 'RLReach3'
 #inputType = 'ShootWriteF'
-filterInp = False
-tauFilt = 2*tau
 
 # N is the number of state variables in the system, N//2 is number of inputs
 # Nout is the number of observables from the system
@@ -200,8 +197,9 @@ else:
 ### recurrent and feedforward connection matrices ###
 ###
 if errorLearning:                                       # PES plasticity on
-    Tmax = 10000.                                       # second - how long to run the simulation
-    continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
+    Tmax = 3000.                                       # second - how long to run the simulation
+    continueTmax = 10000.                               # if continueLearning/testLearned, then start with weights from continueTmax
+    continueTmaxForward = 20000.                        # load forward-model recurrent weights from continueTmaxForward
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
     if recurrentLearning:                               # L2 recurrent learning
         #PES_learning_rate = 9e-1                        # learning rate with excPES_integralTau = Tperiod
@@ -210,9 +208,10 @@ if errorLearning:                                       # PES plasticity on
             PES_learning_rate_rec = 1e-10               # effectively no learning
         else:
             PES_learning_rate_rec = 2e-3                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+                                                        #  weight changes cause L2 to follow ref within a cycle, not just error
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
-        Nexc = 900                                    # number of excitatory neurons
+        Nexc = 5000                                    # number of excitatory neurons
         Tperiod = 1.                                    # second
         if plastDecoders:                               # only decoders are plastic
             Wdyn2 = np.zeros(shape=(N+N//2,N+N//2))
@@ -225,7 +224,7 @@ if errorLearning:                                       # PES plasticity on
         #Wdyn2 = W+np.random.randn(2*N,2*N)*np.max(W)/5.
         Wtransfer = np.eye(N)
 
-Nerror = 200*N                                          # number of error calculating neurons
+Nerror = 500*N                                          # number of error calculating neurons
 reprRadiusErr = 0.2                                     # with error feedback, error is quite small
 
 ###
@@ -242,7 +241,7 @@ Tnolearning = 4*Tperiod
 ### Generate inputs for L1 ###
 ###
 zerosN = np.zeros(N)
-zerosNby2 = np.zeros(N//2)
+zerosNobs = np.zeros(Nobs)
 zeros2N = np.zeros(Nobs+N//2)
 if inputType == 'rampLeave':
     ## ramp input along y0
@@ -342,7 +341,7 @@ elif 'RL' in inputType:
     torqueTmax = 50000.                     # maximum possible torque length during RL;
                                             #  only first few s are valid currently.
     inpfn = interp1d(np.arange(0.,torqueTmax,animdt),torqueArray,axis=0,\
-                                bounds_error=False,fill_value=np.zeros(N//2),kind='linear')
+                        fill_value=np.zeros(N//2),kind='linear')
 elif 'Shoot' in inputType:
     ## load the input learned via reinforcement learning
     import pickle
@@ -356,22 +355,10 @@ elif 'Shoot' in inputType:
     torqueTmax = 50000.                     # maximum possible torque length during RL;
                                             #  only first few s are valid currently.
     inpfn = interp1d(np.arange(0.,torqueTmax,robotdt),torqueArray,axis=0,\
-                                bounds_error=False,fill_value=np.zeros(N//2),kind='nearest')
+                        fill_value=np.zeros(N//2),kind='nearest')
 else:
     inpfn = lambda t: 0.0*np.ones(N)*reprRadius*tau     # constant input, currently zero
     #inpfn = None                                        # zero input
-
-# any of the above inputTypes may be filtered
-if filterInp:
-    trange = np.arange(0.,Tmax,dt)
-    inpfnarray = np.array([inpfn(t) for t in trange])
-    expfilt = np.exp(-np.arange(0,tauFilt*10,dt)/tauFilt)/tauFilt       # normalized exp. decaying kernel
-    inpfnfiltarray = np.zeros((len(trange),N//2))
-    for i in range(N//2):
-        inpfnfiltarray[:,i] = np.convolve(inpfnarray[:,i],expfilt)[:len(trange)]*dt
-    inpfn = interp1d(trange,inpfnfiltarray,axis=0,
-                bounds_error=False,fill_value=np.zeros(N//2),kind='linear')
-    print('Filtering complete.')
 
 if errorLearning:
     if not weightRegularize:
@@ -406,11 +393,9 @@ else:
 #pathprefix = '/lcncluster/gilra/tmp/'
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
-                    ('_seed'+str(seedRin)+'by'+str(inputreduction)+\
-                    (inputType if inputType != 'rampLeave' else '')+\
-                    ('_filt'+str(tauFilt) if filterInp else ''))
-baseFileName = pathprefix+'inverse_rec_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
-                    '_norefinptau_directu_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
+        ('_seed'+str(seedRin)+'by'+str(inputreduction)+inputType if inputType != 'rampLeave' else '')
+baseFileName = pathprefix+'general'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+                    '_norefinptau_ff100ms_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
                     '_weightErrorCutoff'+str(weightErrorCutoff) + \
@@ -430,14 +415,21 @@ baseFileName = pathprefix+'inverse_rec_50ms'+('_ocl' if OCL else '')+'_Nexc'+str
 dataFileName = baseFileName + \
                     ('_continueFrom'+str(continueTmax)+inputStr if continueLearning else '') + \
                     ('_testFrom'+str(continueTmax)+inputStr if testLearned else '') + \
+                    '_learnu_80ms_'+str(continueTmaxForward)+inputStr + \
                     '_'+str(Tmax)+'s'
 print('data will be saved to', dataFileName, '_<start|end|currentweights>.shelve')
 if continueLearning or testLearned:
-    weightsSaveFileName = baseFileName + '_'+str(continueTmax+Tmax)+'s_endweights.shelve'
-    weightsLoadFileName = baseFileName + '_'+str(continueTmax)+'s_endweights.shelve'
+    # save the error to torque network weights
+    weightsSaveFileName = baseFileName + '_'+str(continueTmax+Tmax)+'s_learnu_80ms_endweights.shelve'
+    # to load the error to torque network weights
+    weightsLoadFileName = baseFileName + '_'+str(continueTmax)+'s_learnu_80ms_endweights.shelve'
 else:
-    weightsSaveFileName = baseFileName + '_'+str(Tmax)+'s_endweights.shelve'
-    weightsLoadFileName = baseFileName + '_'+str(Tmax)+'s_endweights.shelve'    
+    # save the error to torque network weights
+    weightsSaveFileName = baseFileName + '_'+str(Tmax)+'s_learnu_80ms_endweights.shelve'
+    # to load the error to torque network weights
+    weightsLoadFileName = baseFileName + '_'+str(Tmax)+'s_learnu_80ms_endweights.shelve'    
+# to load the forward-model recurrent weights into EtoE
+weightsLoadFileNameForward = baseFileName + '_'+str(continueTmaxForward)+'s_endweights.shelve'
 
 ###
 ### Get data from the vrep robotics simulation server, or reload older sim data
@@ -521,9 +513,8 @@ if initLearned:
 # here I scale by angle/velocity factors, below at nodeIn I scale by torque factors.
 rateEvolveProbe *= varFactors[:Nobs]
 rateEvolveFn = interp1d(robtrange,rateEvolveProbe,axis=0,kind='linear',\
-                        bounds_error=False,fill_value=np.zeros(Nobs))
-                                                        # used for the error signal below
-                                      
+                        bounds_error=False,fill_value=0.)
+                                                        # used for the error signal below                                      
 
 ## this color cycle doesn't seem to work!?
 ##plt.gca().set_color_cycle(['red', 'green', 'blue', 'cyan','magenta','yellow','black'])
@@ -544,14 +535,16 @@ if __name__ == "__main__":
     print('building model')
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
-        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.05)*varFactors[Nobs:] )
+        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval)*varFactors[Nobs:] )
                                                                 # scale input to network by torque factors
+        nodeInDelayed = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.1)*varFactors[Nobs:] )
         # layer with learning incorporated
         #intercepts = np.append(np.random.uniform(-0.2,0.2,size=Nexc//2),np.random.uniform(-1.,1.,size=Nexc//2))
         ratorOut = nengo.Ensemble( Nexc, dimensions=Nobs+N//2, radius=reprRadius, neuron_type=nengo.neurons.LIF(), seed=seedR2, label='ratorOut')
         # don't use the same seeds across the connections,
         #  else they seem to be all evaluated at the same values of low-dim variables
         #  causing seed-dependent convergence issues possibly due to similar frozen noise across connections
+        torqueOut = nengo.Ensemble( Nexc, dimensions=N//2, radius=reprRadiusErr, neuron_type=nengo.neurons.LIF(), seed=seedR4, label='torqueOut')
         
         if trialClamp:
             # clamp ratorOut at the end of each trial (Tperiod) for 100ms.
@@ -560,42 +553,8 @@ if __name__ == "__main__":
             clampValsNegs = -100.*np.ones(Nexc)
             endTrialClamp = nengo.Node(lambda t: clampValsZeros if (t%Tperiod)<(Tperiod-Tclamp) else clampValsNegs)
             nengo.Connection(endTrialClamp,ratorOut.neurons,synapse=1e-3)
-                                                                    # fast synapse for fast-reacting clamp
-        
-        if inhibition and not plastDecoders:                    # excClipType='clip<0' only works with weights
-            Ninh = Nexc/4
-            IreprRadius = 1.0
-            inhibrator = nengo.Ensemble( Ninh, dimensions=1,\
-                                        intercepts=np.random.uniform(-0.1*IreprRadius,IreprRadius,size=Ninh),\
-                                        encoders=np.ones(shape=(Ninh,1))*IreprRadius,radius=IreprRadius,\
-                                        neuron_type=nengo.neurons.LIF(),seed=seedR2)
-                                                                # only represents biasing function f(x) hence dimension = 1
-                                                                # some neurons have negative intercept #  i.e. baseline firing,
-                                                                # encoders from f(x) to neurons are all 1 (a la Parisien et al 2008)
-            excClipType = 'clip<0'
-            phi_f = 1.0/(Nexc*400.0) / 1.5                      # a positive constant to scale
-                                                                #  biasing function f(ExcActivityVec) between 0 and 1
-                                                                # max firing of Nexc neurons is 400Hz, /1.5 adhoc,
-                                                                # this ensures f between 0 and 1
-            EtoI = nengo.Connection(ratorOut.neurons, inhibrator,\
-                                        transform = phi_f*np.ones(shape=(1,Nexc)),\
-                                        synapse=tau_AMPA)
-            ItoE = nengo.Connection(inhibrator.neurons, ratorOut.neurons,
-                                        transform = np.zeros(shape=(Nexc,Ninh)),\
-                                        synapse=tau)            # need neurons->neurons for InhSVG
-            ItoE.learning_rule_type = nengo.InhVSG(
-                                        learning_rate=2e-8,pre_tau=tau,
-                                        theta=3.0, clipType='clip>0',
-                                        decay_rate_x_dt=inhVSG_weightsDecayRate*dt)
-                                                                # clip away inhibitory weights > 0
-                                                                # no synaptic weights decay
-        else: excClipType = None
+                                                                # fast synapse for fast-reacting clamp
 
-        if initLearned and not plastDecoders and not inhibition:
-                                                                # plastDecoders are not modified, so no need of EtoEfake
-                                                                # initLearned gives bidirectional weights, so conflicts with inhibition
-            EtoEfake = nengo.Connection(ratorOut, ratorOut,
-                                function=Wdesired, synapse=tau) # synapse is tau_syn for filtering
         if plastDecoders:
             EtoE = nengo.Connection(ratorOut, ratorOut,
                                 transform=Wdyn2, synapse=tau)   # synapse is tau_syn for filtering
@@ -604,7 +563,7 @@ if __name__ == "__main__":
                                 transform=Wdyn2, synapse=tau)   # synapse is tau_syn for filtering
 
         nodeIn_probe = nengo.Probe(nodeIn, synapse=None)
-        #ratorOut_probe = nengo.Probe(ratorOut, synapse=tau)
+        ratorOut_probe = nengo.Probe(ratorOut, synapse=tau)
                                                                 # synapse is tau for filtering
                                                                 # Default is no filtering
         if testLearned and saveSpikes:
@@ -621,50 +580,31 @@ if __name__ == "__main__":
     with mainModel:
         if errorLearning:
             ###
-            ### copycat layer only for recurrent learning ###
-            ###
-            # another layer that produces the expected signal for above layer to learn
-            # force the encoders, maxrates and intercepts to be same as ratorOut
-            #  so that the weights are directly comparable between netExpect (copycat) and net2
-            # if Wdesired is a function, then this has to be LIF layer
-            if recurrentLearning and copycatLayer:
-                expectOut = nengo.Ensemble( Nexc, dimensions=Nobs+N//2, radius=reprRadius, neuron_type=nengo.neurons.LIF(), seed=seedR4 )
-                # a node does not do the leaky integration / low-pass filtering that an ensemble does,
-                #  so node won't work, unless I use the original W and not the one with tau and I, also input should not be *tau
-                #  even with those above, it still gave some overflow error (dunno why)
-                EtoEexpect = nengo.Connection(expectOut, expectOut,
-                                        function=Wdesired, synapse=tau) # synapse is tau_syn for filtering
-                if trialClamp:
-                    nengo.Connection(endTrialClamp,expectOut.neurons,synapse=1e-3)
-                                                                        # clamp expectOut like ratorIn and ratorOut above
-                                                                        # fast synapse for fast-reacting clamp
-                expectOut_probe = nengo.Probe(expectOut, synapse=tau)
-            ###
             ### error ensemble, could be with error averaging, gets post connection ###
             ###
             if spikingNeurons:
                 error = nengo.Ensemble(Nerror, dimensions=N, radius=reprRadiusErr)
             else:
-                error = nengo.Node( size_in=N//2, output = lambda timeval,err: err )
-                if trialClamp:
-                    errorOff = nengo.Node( size_in=N//2, output = lambda timeval,err: \
-                                                (err if timeval<(Tmax-Tnolearning) else zerosNby2) \
-                                                if ((timeval%Tperiod)<Tperiod-Tclamp and (timeval>Tperiod)) else zerosNby2 )
-                else:
-                    errorOff = nengo.Node( size_in=N//2, output = lambda timeval,err: \
-                                                (err if (timeval<(Tmax-Tnolearning) and (timeval>Tperiod)) else zerosNby2) )
-                error2errorOff = nengo.Connection(error,errorOff,synapse=None)
-            if errorAverage:                                # average the error over Tperiod time scale
-                errorT = np.eye(Nobs)*(1-tau/Tperiod*dt/Tperiod)# neuralT' = tau*dynT + I
-                                                            # dynT=-1/Tperiod*dt/Tperiod
-                                                            # *dt/Tperiod converts integral to mean
-                nengo.Connection(errorOff,errorOff,transform=errorT,synapse=tau)
+                # cannot use Node with a plastic connection to torqueOut, hence Ensemble!
+                #error = nengo.Node( size_in=Nobs, output = lambda timeval,err: err )
+                error = nengo.Ensemble(Nerror, dimensions=Nobs, radius=reprRadiusErr)
+                errorT = nengo.Node( size_in=N//2, output = lambda timeval,err: err )
+                errorOffT = nengo.Node( size_in=N//2, output = lambda timeval,err: \
+                                            (err if (timeval<(Tmax-Tnolearning) and (timeval>Tperiod)) \
+                                                    else np.zeros(N//2)) )
+                errorT2errorOffT = nengo.Connection(errorT,errorOffT,synapse=None)
+            # this connection must be learned to decode torque u from the error
+            error2torqueOut = nengo.Connection(error.neurons,torqueOut.neurons,\
+                                            transform=np.zeros((Nexc,Nerror)),synapse=tau)
+            plasticConnEE = error2torqueOut
             # Error = post - pre * desired_transform
-            ratorOut2error = nengo.Connection(ratorOut[Nobs:],error,synapse=tau)
+            #ratorOut2error = nengo.Connection(ratorOut[:Nobs],error,synapse=tau)
+            torqueOut2errorT = nengo.Connection(torqueOut,errorT,synapse=tau)
                                                             # post input to error ensemble (pre below)
-            # important to probe only ratorOut2error as output, and not directly ratorOut, to accommodate randomDecodersType != ''
-            # 'output' reads out the output of the connection in nengo 2.2 on
-            ratorOut_probe = nengo.Probe(ratorOut2error, 'output')
+            ## important to probe only ratorOut2error as output, and not directly ratorOut, to accommodate randomDecodersType != ''
+            ## 'output' reads out the output of the connection in nengo 2.2 on
+            #ratorOut_probe = nengo.Probe(ratorOut2error, 'output')
+            torqueOut_probe = nengo.Probe(torqueOut2errorT, 'output')
 
             if trialClamp:
                 ###
@@ -680,7 +620,7 @@ if __name__ == "__main__":
                         
                     errorClamp = nengo.Node(rampClamp)
                     nengo.Connection(errorClamp,error.neurons,synapse=1e-3)
-                                                                # fast synapse for fast-reacting clamp
+                                                            # fast synapse for fast-reacting clamp
 
             ###
             ### Add the relevant pre signal to the error ensemble ###
@@ -688,20 +628,11 @@ if __name__ == "__main__":
             if recurrentLearning:                           # L2 rec learning
                 rateEvolve = nengo.Node(rateEvolveFn)
                 # Error = post - desired_output
-                if copycatLayer:                            # copy another network's behaviour
-                    rateEvolve2error = nengo.Connection(expectOut,error[:Nobs],synapse=tau,transform=-np.eye(Nobs))
+                rateEvolve2error = nengo.Connection(rateEvolve,error[:Nobs],synapse=None,transform=np.eye(Nobs))
                                                             # - desired output (post above)
-                    nengo.Connection(nodeIn,ratorOut[Nobs:],synapse=tau)
+                nengo.Connection(nodeInDelayed,errorT,synapse=None,transform=-np.eye(N//2))
                                                             # direct input to ratorOut not via augmented error!
-                else:                                       # copy rate evolution behaviour
-                    #nengo.Connection(rateEvolve,error[:Nobs],synapse=tau,transform=-np.eye(Nobs))
-                    #nengo.Connection(nodeIn,error[Nobs:],synapse=tau,transform=-np.eye(N//2))
-                    inpfn2error = nengo.Connection(nodeIn,error,synapse=None,transform=-np.eye(N//2))
-                                                            # - desired output (post above)
-                    nengo.Connection(rateEvolve,ratorOut[:Nobs],synapse=None)
-                                                            # direct input to ratorOut not via augmented error!
-                plasticConnEE = EtoE
-                rateEvolve_probe = nengo.Probe(inpfn2error, 'output')
+                rateEvolve_probe = nengo.Probe(rateEvolve2error, 'output')
 
             ###
             ### Add the exc learning rules to the connection, and the error ensemble to the learning rule ###
@@ -717,29 +648,18 @@ if __name__ == "__main__":
                                                             # set to zero, yet works fine!
                                                             # It works only if you set it
                                                             # in the constructor PES() above
-            if learnIfNoInput:  # obsolete, no support for trialClamp
-                print("Obsolete flag learnIfNoInput")
-                sys.exit(1)
-                errorWt = nengo.Node( size_in=Nobs+N//2, output = lambda timeval,errWt: \
-                                            zeros2N if (timeval%Tperiod) < rampT else errWt*(np.abs(errWt)>weightErrorCutoff) )
-                                                            # only learn when there is no input,
-                                                            #  using the local (input+err) current
-                                                            #  thus, only the error is used & input doesn't interfere
-                nengo.Connection(errorOff,errorWt,synapse=weightErrorTau)
-                                                            # error to errorWt ensemble, filter for weight learning
+            if trialClamp:
+                # if trialClamp just forcing error to zero doesn't help, as errorWt decays at long errorWeightTau,
+                #  so force errorWt also to zero, so that learning is shutoff at the end of a trial
+                errorWt = nengo.Node( size_in=N//2, output = lambda timeval,errWt: \
+                                            errWt if ((timeval%Tperiod)<Tperiod-Tclamp and timeval<Tmax-Tnolearning) else np.zeros(N//2) )
+                                                        # To Do: implement weightErrorCutoff only on errWt[0:N] above
             else:
-                if trialClamp:
-                    # if trialClamp just forcing error to zero doesn't help, as errorWt decays at long errorWeightTau,
-                    #  so force errorWt also to zero, so that learning is shutoff at the end of a trial
-                    errorWt = nengo.Node( size_in=Nobs+N//2, output = lambda timeval,errWt: \
-                                                errWt if ((timeval%Tperiod)<Tperiod-Tclamp and timeval<Tmax-Tnolearning) else zeros2N )
-                                                            # To Do: implement weightErrorCutoff only on errWt[0:N] above
-                else:
-                    errorWt = nengo.Node( size_in=Nobs+N//2, output = lambda timeval,errWt: \
-                                                errWt*(np.abs(errWt)>weightErrorCutoff) if timeval<Tmax-Tnolearning else zeros2N )
-                nengo.Connection(errorOff,errorWt[Nobs:],synapse=weightErrorTau)
-                                                            # error to errorWt ensemble, filter for weight learning
-                                                            # rest of errorWt beyond Nobs will be zero by default (no connection)
+                errorWt = nengo.Node( size_in=N//2, output = lambda timeval,errWt: \
+                                            errWt*(np.abs(errWt)>weightErrorCutoff) if timeval<Tmax-Tnolearning else np.zeros(N//2) )
+            nengo.Connection(errorT,errorWt,synapse=weightErrorTau)
+                                                        # error to errorWt ensemble, filter for weight learning
+                                                        # rest of errorWt beyond Nobs will be zero by default (no connection)
 
             error_conn = nengo.Connection(\
                     errorWt,plasticConnEE.learning_rule['PES'],synapse=dt)
@@ -748,37 +668,13 @@ if __name__ == "__main__":
             ### feed the error back to force output to follow the input (for both recurrent and feedforward learning) ###
             ###
             if errorFeedback and not testLearned:
-                #np.random.seed(1)
-                if not errorGainProportion: # default error feedback
-                    errorFeedbackConn = nengo.Connection(errorOff,ratorOut[Nobs:],\
-                            synapse=errorFeedbackTau,\
-                            transform=-errorFeedbackGain)#*(np.random.uniform(-0.1,0.1,size=(N,N))+np.eye(N)))
-                else:
-                    # obsolete
-                    ## calculate the gain from the filtered mean(abs(error))
-                    #autoGainControl = nengo.Node(size_in=1,size_out=1,\
-                    #                           output = lambda timeval,abserr_filt: \
-                    #                                   -errorFeedbackGain*abserr_filt\
-                    #                                   /errorGainProportionTau/reprRadiusErr)
-                    #nengo.Connection(error,autoGainControl,synapse=errorGainProportionTau,\
-                    #                           function = lambda err: np.mean(np.abs(err)))
-                    # instead of the above gain[err(t)], I just have gain(t) 
-                    autoGainControl = nengo.Node(size_in=1,size_out=1,\
-                                                    output = lambda timeval,x: \
-                                                        -errorFeedbackGain*(2.*Tmax-timeval)/2./Tmax)
-                    # multiply error with this calculated gain
-                    errorGain = nengo.Node(size_in=N+1,size_out=N,
-                                        output = lambda timeval,x: x[:N]*x[-1])
-                    nengo.Connection(errorOff,errorGain[:N],synapse=0.001)
-                    nengo.Connection(autoGainControl,errorGain[-1],synapse=0.001)
-                    # feedback the error multiplied by the calculated gain
-                    errorFeedbackConn = nengo.Connection(\
-                                        errorGain,ratorOut,synapse=errorFeedbackTau)
-                if errorGainDecay and spikingNeurons: # decaying gain, works only if error is computed from spiking neurons
-                    errorFeedbackConn.learning_rule_type = \
-                        {'wtDecayRule':nengo.PES(decay_rate_x_dt=errorGainDecayRate*dt)}
-                                                            # PES with error unconnected, so only decay
-        
+                #errorFeedbackConn = nengo.Connection(error,ratorOut[:Nobs],\
+                #                                synapse=errorFeedbackTau,\
+                #                                transform=-errorFeedbackGain)
+                errorFeedbackConn = nengo.Connection(errorOffT,torqueOut,\
+                                                synapse=errorFeedbackTau,\
+                                                transform=-errorFeedbackGain)
+
             ###
             ### error and weight probes ###
             ###
@@ -787,63 +683,6 @@ if __name__ == "__main__":
             if not OCL and Nexc<=4000:                                  # GPU mem is not large enough to probe large weight matrices
                 learnedWeightsProbe = nengo.Probe(\
                             plasticConnEE,'weights',sample_every=weightdt,label='EEweights')
-
-
-    #################################
-    ### Initialize weights if requested
-    #################################
-
-    if initLearned:
-        if not plastDecoders:
-            # Easier to just use EtoEfake with initLearned.
-            # Else even if I set the ensemble properties perfectly (manually, or setting seed of the Ensemble),
-            #  I will still need to conect the Learning Rule to the new connection, etc.
-            if OCL:
-                sim = nengo_ocl.Simulator(mainModel,dt)
-            else:
-                sim = nengo.Simulator(mainModel,dt)
-            
-            Eencoders = sim.data[ratorOut].encoders
-            Eintercepts = sim.data[ratorOut].intercepts
-            Emax_rates = sim.data[ratorOut].max_rates
-            Egains = sim.data[ratorOut].gain
-            #EtoEdecoders = sim.data[EtoEfake].decoders     # only for nengo2 release using pip
-            #WEE = dot(dot(Eencoders,W),EtoEdecoders)/ratorOut.radius
-            EtoEfakeWeights = sim.data[EtoEfake].weights    # for nengo2 dev from github
-                                                            # compare with nengo release above
-            EtoEtransform = np.dot(Eencoders,EtoEfakeWeights)/ratorOut.radius
-                                                            # for nengo2 from github, weights = dot(W,decoders)
-            # weights = gain.reshape(-1, 1) * transform (for connection(neurons,neurons) -- see nengo/builder/connection.py)
-            #  i.e. reshape converts from (1000,) which is 1x1000, into 1000x1.
-            #  and then NOT a dot product so each row will be multiplied
-            # ( conversely, transform = weights / gain.reshape(-1,1) )
-            # use below weights to compare against probed weights of EtoE = connection(neurons,neurons)
-            EtoEweights = sim.data[ratorOut].gain.reshape(-1,1) * EtoEtransform
-            if zeroLowWeights:
-                # find 'low' weights
-                lowcut = 1e-4
-                idxs = np.where(abs(EtoEweights)>lowcut) # ((row #s),(col #s))
-                print("Number of weights retained that are more than",lowcut,"are",\
-                        len(idxs[0]),"out of",EtoEweights.size,\
-                        "i.e.",len(idxs[0])/float(EtoEweights.size)*100,"% of the weights.")
-                EtoEtransform[np.nonzero(abs(EtoEweights)<=lowcut)] = 0.
-            # perturb the weights
-            #EtoEtransform = EtoEtransform*np.random.uniform(0.75,1.25,(Nexc,Nexc))
-            EtoEweightsPert = sim.data[ratorOut].gain.reshape(-1,1) * EtoEtransform
-            EtoE.transform = EtoEtransform
-
-            # removing connections screws up the sequence of nengo building
-            #  leading to problems in weights matching to 'ideal'.
-            #  So do not remove EtoEfake if initLearned
-            #  and/or comparing to ideal weights, just set transform to zero!
-            EtoEfake.transform = np.zeros((Nobs+N//2,Nobs+N//2))
-            ## if not initLearned, we don't care about matching weights to ideal
-            ## this reduces a large set of connections, esp if Nexc is large
-            #model.connections.remove(EtoEfake)
-        else:
-            EtoE.function = Wdesired
-            EtoE.transform = np.array(1.0)
-        
 
     #################################
     ### Build Nengo network
@@ -858,6 +697,16 @@ if __name__ == "__main__":
     #################################
     ### load previously learned weights, if requested and file exists
     #################################
+    if errorLearning and isfile(weightsLoadFileNameForward):
+        print('loading previously learned rec weights for EtoE from',weightsLoadFileNameForward)
+        with contextlib.closing(
+                shelve.open(weightsLoadFileNameForward, 'r', protocol=-1)
+                ) as weights_dict:
+            #sim.data[EtoE].weights = weights_dict['learnedWeights']                # can't be set, only read
+            sim.signals[ sim.model.sig[EtoE]['weights'] ] \
+                                = weights_dict['learnedWeights']                    # can be set if weights/decoders are plastic
+    else:
+        print('Not loading any pre-learned rec weights for EtoE.')
     if errorLearning and (continueLearning or testLearned) and isfile(weightsLoadFileName):
         print('loading previously learned weights from',weightsLoadFileName)
         with contextlib.closing(
@@ -868,63 +717,6 @@ if __name__ == "__main__":
                                 = weights_dict['learnedWeights']                    # can be set if weights/decoders are plastic
     else:
         print('Not loading any pre-learned weights.')
-
-    # save the expected weights
-    if copycatLayer:
-        with contextlib.closing(
-                # 'c' opens for read/write, creating if non-existent
-                shelve.open(dataFileName+'_expectweights.shelve', 'c', protocol=-1)
-                ) as data_dict:
-            data_dict['weights'] = np.array([sim.data[EtoEexpect].weights])
-            data_dict['encoders'] = sim.data[expectOut].encoders
-            data_dict['reprRadius'] = expectOut.radius
-            data_dict['gain'] = sim.data[expectOut].gain
-
-    def changeLearningRate(changeFactor):
-        '''
-         Call this function to change the learning rate.
-         Doesn't actually change learning rate, only the decay factor in the operations!
-         Will only work if excPESIntegralTau = None, else the error is accumulated every step with this factor!
-        '''
-        # change the effective learning rate by changing the decay factor for the learning operators in the simulator
-        for op in sim._step_order:
-            if op.__class__.__name__=='ElementwiseInc':
-                if op.tag=='PES:Inc Delta':
-                    print('setting learning rate ',changeFactor,'x in',op.__class__.__name__,op.tag)
-                    op.decay_factor *= changeFactor         # change learning rate for PES rule
-                                                            #  PES rule doesn't have a SimPES() operator;
-                                                            #  it uses an ElementwiseInc to calculate Delta
-                elif op.tag=='weights += delta':
-                    print('setting weight decay = 1.0 in',op.__class__.__name__,op.tag)
-                    op.decay_factor = 1.0                   # no weight decay for all learning rules
-
-        # rebuild steps (resets ops with their own state, like Processes)
-        # copied from simulator.py Simulator.reset()
-        sim.rng = np.random.RandomState(sim.seed)
-        sim._steps = [op.make_step(sim.signals, sim.dt, sim.rng)
-                            for op in sim._step_order]
-
-    def turn_off_learning():
-        '''
-         Call this function to turn learning off at the end
-        '''
-        # set the learning rate to zero for the learning operators in the simulator
-        for op in sim._step_order:
-            if op.__class__.__name__=='ElementwiseInc':
-                if op.tag=='PES:Inc Delta':
-                    print('setting learning rate = 0.0 in',op.__class__.__name__,op.tag)
-                    op.decay_factor = 0.0                   # zero learning rate for PES rule
-                                                            #  PES rule doesn't have a SimPES() operator;
-                                                            #  it uses an ElementwiseInc to calculate Delta
-                elif op.tag=='weights += delta':
-                    print('setting weight decay = 1.0 in',op.__class__.__name__,op.tag)
-                    op.decay_factor = 1.0                   # no weight decay for all learning rules
-
-        # rebuild steps (resets ops with their own state, like Processes)
-        # copied from simulator.py Simulator.reset()
-        sim.rng = np.random.RandomState(sim.seed)
-        sim._steps = [op.make_step(sim.signals, sim.dt, sim.rng)
-                            for op in sim._step_order]
 
     def save_data(endTag):
         #print 'pickling data'
@@ -948,6 +740,7 @@ if __name__ == "__main__":
             data_dict['errorLearning'] = errorLearning
             data_dict['spikingNeurons'] = spikingNeurons
             data_dict['varFactors'] = varFactors
+            data_dict['torqueOut'] = sim.data[torqueOut_probe]
             if testLearned and saveSpikes:
                 data_dict['EspikesOut2'] = sim.data[ratorOut_EspikesOut]
             if spikingNeurons:

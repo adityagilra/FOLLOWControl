@@ -142,8 +142,8 @@ inputType = 'amplVaryHeights'
 #inputType = 'RLReach2'
 #inputType = 'RLReach3'
 #inputType = 'ShootWriteF'
-filterInp = True
-tauFilt = tau
+filterInp = False
+tauFilt = 2*tau
 
 # N is the number of state variables in the system, N//2 is number of inputs
 # Nout is the number of observables from the system
@@ -210,8 +210,8 @@ if errorLearning:                                       # PES plasticity on
             PES_learning_rate_rec = 1e-10               # effectively no learning
             PES_learning_rate_FF = 1e-10                # effectively no learning
         else:
-            PES_learning_rate_FF = 2e-3                 # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
-            PES_learning_rate_rec = 2e-3                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+            PES_learning_rate_FF = 2e-3*4                 # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+            PES_learning_rate_rec = 2e-3*4                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
                                                         #  else weight changes cause L2 to follow ref within a cycle, not just error
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
@@ -410,9 +410,9 @@ else:
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
                     ('_seed'+str(seedRin)+'by'+str(inputreduction)+\
-                    inputType if inputType != 'rampLeave' else ''+\
-                    '_filt'+str(tauFilt) if filterInp else '')
-baseFileName = pathprefix+'inverse_diff_ff_N200_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+                    (inputType if inputType != 'rampLeave' else '')+\
+                    ('_filt'+str(tauFilt) if filterInp else ''))
+baseFileName = pathprefix+'inverse_diff_ff_eta4_N200_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \

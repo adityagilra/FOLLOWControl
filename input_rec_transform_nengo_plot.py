@@ -673,7 +673,7 @@ def plot_error_fulltime(dataFileName):
         points_per_bin = int(Tperiod/dt)
         ax2.plot(trange[::points_per_bin], np.sum(err**2,axis=1).reshape((-1,points_per_bin)).mean(axis=1),\
                                             color='k', linewidth=plot_linewidth)
-        #ax2.set_yscale('log')
+        ax2.set_yscale('log')
         
         axes_labels(ax,'time (s)','error mean ('+str(NperiodsAverage)+'*Tperiod)',xpad=-6,ypad=-7)
         axes_labels(ax2,'time (s)','error$^2$',xpad=-6,ypad=3)
@@ -754,7 +754,7 @@ if __name__ == "__main__":
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_inhdecay100_excdecay100_bothTau2_PES2e-3_learn_rec_clip<0_initLearned_func_400.0s_nostim")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_gain10_inhdecay40_bothTau2_PES1e-3_learn_rec_clip<0_func_6000.0s_kickStart")
     #plot_rec_nengo_all("../data/rec_learn_data_wtf_Nexc2000_seeds0333_nodeerr_learn_rec_func_LinOsc_3000.0s")
-    plot_rec_nengo_all("../data/inverse_diff_ff_mod_N200_50ms_DL_Nexc500_softLIF_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s")
+    plot_rec_nengo_all("../data/inverse_diff_ff_scaledO_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.04_10000.0s")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_learn_ff_None_noinh_noErrFB_1200.0s_final.shelve")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_learn_ff_None_noinh_noErrFB_func_1200.0s_final.shelve")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_learn_ff_clip<0_noinh_noErrFB_400.0s_final.shelve")
