@@ -200,16 +200,20 @@ else:
 ### recurrent and feedforward connection matrices ###
 ###
 if errorLearning:                                       # PES plasticity on
-    Tmax = 10000.                                       # second - how long to run the simulation
+    Tmax = 500.                                        # second - how long to run the simulation
     continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
+    # with zero bias, at reprRadius, if you want 50Hz, gain=1.685, if 100Hz, gain=3.033, if 400Hz, 40.5
+    nrngain = 40.5
     if recurrentLearning:                               # L2 recurrent learning
         #PES_learning_rate = 9e-1                        # learning rate with excPES_integralTau = Tperiod
         #                                                #  as deltaW actually becomes very small integrated over a cycle!
         if testLearned:
+            PES_learning_rate_ff = 1e-10                # effectively no learning
             PES_learning_rate_rec = 1e-10               # effectively no learning
         else:
-            PES_learning_rate_rec = 2e-3                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+            PES_learning_rate_ff = 1000.                  # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+            PES_learning_rate_rec = 1e-4                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
         Nexc = 900                                    # number of excitatory neurons
@@ -409,7 +413,7 @@ inputStr = ('_trials' if trialClamp else '') + \
                     ('_seed'+str(seedRin)+'by'+str(inputreduction)+\
                     (inputType if inputType != 'rampLeave' else '')+\
                     ('_filt'+str(tauFilt) if filterInp else ''))
-baseFileName = pathprefix+'inverse_rec_goodenc_S_L_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_rec_goodenc_tau20.20_eta1000by20_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_directu_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
@@ -550,6 +554,7 @@ if __name__ == "__main__":
         # layer with learning incorporated
         #intercepts = np.append(np.random.uniform(-0.2,0.2,size=Nexc//2),np.random.uniform(-1.,1.,size=Nexc//2))
         ratorOut = nengo.Ensemble( Nexc, dimensions=N//2, radius=reprRadius,
+                                bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nexc)*nrngain,
                                 neuron_type=nengo.neurons.LIF(), seed=seedR2, label='ratorOut')
         # don't use the same seeds across the connections,
         #  else they seem to be all evaluated at the same values of low-dim variables
@@ -712,7 +717,9 @@ if __name__ == "__main__":
                                             #decay_rate_x_dt=excPES_weightsDecayRate*dt,
                                             #integral_tau=excPES_integralTau) }
             plasticConnEE.learning_rule_type = EtoERulesDict
-            InEtoE.learning_rule_type = EtoERulesDict
+            InEtoERulesDict = { 'PES' : nengo.PES(learning_rate=PES_learning_rate_ff,
+                                            pre_tau=tau) }
+            InEtoE.learning_rule_type = InEtoERulesDict
             #plasticConnEE.learning_rule['PES'].learning_rate=0
                                                             # learning_rate has no effect
                                                             # set to zero, yet works fine!
