@@ -213,7 +213,7 @@ if errorLearning:                                       # PES plasticity on
             PES_learning_rate_rec = 1e-10               # effectively no learning
         else:
             PES_learning_rate_ff = 1000.                  # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
-            PES_learning_rate_rec = 1e-4                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+            PES_learning_rate_rec = 1e-10#2e-3                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
         Nexc = 900                                    # number of excitatory neurons
@@ -413,7 +413,7 @@ inputStr = ('_trials' if trialClamp else '') + \
                     ('_seed'+str(seedRin)+'by'+str(inputreduction)+\
                     (inputType if inputType != 'rampLeave' else '')+\
                     ('_filt'+str(tauFilt) if filterInp else ''))
-baseFileName = pathprefix+'inverse_rec_goodenc_tau20.20_eta1000by20_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_rec_goodenc_tau20.20_eta1000byinf_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_directu_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \

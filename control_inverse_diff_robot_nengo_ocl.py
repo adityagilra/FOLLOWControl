@@ -58,7 +58,7 @@ funcType = 'robot2_todorov_gravity'     # if learnFunction, then robot two-link 
 
 #pathprefix = '/lcncluster/gilra/tmp/'
 pathprefix = '../data/'
-weightsLoadFileName = 'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_60000.0s_endweights.shelve'
+weightsLoadFileName = 'inverse_diff_ff_S2_d30c40_N3000_ocl_Nexc5000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s_endweights.shelve'
 #trajectoryFileName = 'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom3000.0_seed2by0.3RLSwing_10.0s_start'
 #trajectoryFileName = 'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLReach3_10.0s_start'
 #trajectoryFileName = 'robot2_todorov_gravity_traj_v2_star'
@@ -129,7 +129,8 @@ else:
     elif funcType == 'robot2_todorov':
         varFactors = (1.,1.,0.5,0.5,0.5,0.5)                # angleFactors, velocityFactors, torqueFactors
     elif funcType == 'robot2_todorov_gravity':
-        varFactors = (1./2.5,1./2.5,0.05,0.05,0.02,0.02)    # angleFactors, velocityFactors, torqueFactors
+        #varFactors = (1./2.5,1./2.5,0.05,0.05,0.02,0.02)    # angleFactors, velocityFactors, torqueFactors
+        varFactors = (1./2.5,1./2.5,0.15,0.15,0.1,0.1)    # angleFactors, velocityFactors, torqueFactors
     elif funcType == 'robot2XY_todorov_gravity':
         #varFactors = (1.,1.,1.,1.,0.15,0.15,0.125,0.125)    # xyFactors, velocityFactors, torqueFactors
         varFactors = (2.5,2.5,1.2,1.2,0.075,0.075,0.025,0.025)    # xyFactors, velocityFactors, torqueFactors
@@ -145,10 +146,13 @@ if errorLearning:                                       # PES plasticity on
     Tmax = 10.                                          # second - how long to run the simulation
     continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
-    reprRadiusIn = 0.2                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
+    reprRadiusIn = 1.0                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
+    # with zero bias, at reprRadius, if you want 50Hz, gain=1.685, if 100Hz, gain=3.033, if 400Hz, 40.5
+    nrngain = 40.5
     if 'acrobot' in funcType: inputreduction = 0.5      # input reduction factor
     else: inputreduction = 0.3                          # input reduction factor
-    Nexc = 3000                                         # number of excitatory neurons
+    Nin = 3000
+    Nexc = 5000                                         # number of excitatory neurons
     Tperiod = 1.                                        # second
 
 reprRadiusErr = 0.2                                     # with error feedback, error is quite small
@@ -188,8 +192,13 @@ with contextlib.closing(
         ) as data_dict:
     trange = data_dict['trange']
     trueTorque = data_dict['ratorOut']      # true torque sent to arm and learning network (via nodeIn)
-    varFactors = data_dict['varFactors']
+    varFactorsOld = data_dict['varFactors']
     rateEvolve = data_dict['rateEvolve']    # true arm trajectory
+rateEvolve[:,2] = rateEvolve[:,2]*varFactors[2]/varFactorsOld[2]
+rateEvolve[:,3] = rateEvolve[:,3]*varFactors[3]/varFactorsOld[3]
+# shape of trueTorque is (5001,) -- how come not 2D?!
+#trueTorque[:,0] = trueTorque[:,0]#*varFactors[4]/varFactorsOld[4]
+#trueTorque[:,1] = trueTorque[:,1]*varFactors[5]/varFactorsOld[5]
 # the true arm trajectory rateEvolve and the network trajectory y2 are already scaled to nengo ensemble radius
 #  so can be used directly here (divide by varFactors to get real world values)
 desiredStateFn = interp1d(trange,rateEvolve,axis=0,kind='linear',bounds_error=False,fill_value=0.)
@@ -230,12 +239,14 @@ if __name__ == "__main__":
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
         nodeIn = nengo.Node(desiredStateFn)                             # reference state evolution
-        nodeInD = nengo.Node(lambda t: desiredStateFn(t-0.025))         # delayed reference state evolution
-        nodeInTarget = nengo.Node(lambda t: desiredStateFn(t-0.05))     # target for error feedback (even more delayed) reference state evolution
+        nodeInD = nengo.Node(lambda t: desiredStateFn(t-0.03))         # delayed reference state evolution
+        nodeInTarget = nengo.Node(lambda t: desiredStateFn(t-0.04))     # target for error feedback (even more delayed) reference state evolution
         # input layer from which feedforward weights to ratorOut are computed
-        ratorIn = nengo.Ensemble( Nexc, dimensions=Nobs, radius=reprRadiusIn,
+        ratorIn = nengo.Ensemble( Nin, dimensions=Nobs, radius=reprRadiusIn,
+                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nin)*nrngain,
                             neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
-        ratorInD = nengo.Ensemble( Nexc, dimensions=Nobs, radius=reprRadiusIn,
+        ratorInD = nengo.Ensemble( Nin, dimensions=Nobs, radius=reprRadiusIn,
+                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nin)*nrngain,
                             neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
         nengo.Connection(nodeIn, ratorIn, synapse=None)
         nengo.Connection(nodeInD, ratorInD, synapse=None)
@@ -243,18 +254,19 @@ if __name__ == "__main__":
         # layer with learning incorporated
         #intercepts = np.append(np.random.uniform(-0.2,0.2,size=Nexc//2),np.random.uniform(-1.,1.,size=Nexc//2))
         ratorOut = nengo.Ensemble( Nexc, dimensions=N//2, radius=reprRadius,
+                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nexc)*nrngain,
                             neuron_type=nengo.neurons.LIF(), seed=seedR2, label='ratorOut')
         # don't use the same seeds across the connections,
         #  else they seem to be all evaluated at the same values of low-dim variables
         #  causing seed-dependent convergence issues possibly due to similar frozen noise across connections
                 
         EtoE = nengo.Connection(ratorInD.neurons, ratorOut.neurons,
-                                    transform=np.zeros((Nexc,Nexc)), synapse=tau)
+                                    transform=np.zeros((Nexc,Nin)), synapse=tau)
 
         # make InEtoE connection after EtoE, so that reprRadius from EtoE
         #  instead of reprRadiusIn from InEtoE is used to compute decoders for ratorOut
         InEtoE = nengo.Connection(ratorIn.neurons, ratorOut.neurons,
-                                    transform=np.zeros((Nexc,Nexc)), synapse=tau)
+                                    transform=np.zeros((Nexc,Nin)), synapse=tau)
         
         error = nengo.Node( size_in=Nobs, output = lambda timeval,err: err )
         # Error = x_desired - x_true
