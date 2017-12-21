@@ -142,8 +142,8 @@ inputType = 'amplVaryHeights'
 #inputType = 'RLReach2'
 #inputType = 'RLReach3'
 #inputType = 'ShootWriteF'
-filterInp = False
-tauFilt = tau
+filterInp = True#False
+tauFilt = 0.1#tau
 
 # N is the number of state variables in the system, N//2 is number of inputs
 # Nout is the number of observables from the system
@@ -373,7 +373,8 @@ else:
 if filterInp:
     trange = np.arange(0.,Tmax,dt)
     inpfnarray = np.array([inpfn(t) for t in trange])
-    expfilt = np.exp(-np.arange(0,tauFilt*10,dt)/tauFilt)/tauFilt       # normalized exp. decaying kernel
+    expfilt = np.exp(-np.arange(0,tauFilt*100,dt)/tauFilt)              # normalized exp. decaying kernel
+    expfilt = expfilt/np.sum(expfilt)/dt
     inpfnfiltarray = np.zeros((len(trange),N//2))
     for i in range(N//2):
         inpfnfiltarray[:,i] = np.convolve(inpfnarray[:,i],expfilt)[:len(trange)]*dt
@@ -417,7 +418,7 @@ inputStr = ('_trials' if trialClamp else '') + \
                     ('_seed'+str(seedRin)+'by'+str(inputreduction)+\
                     (inputType if inputType != 'rampLeave' else '')+\
                     ('_filt'+str(tauFilt) if filterInp else ''))
-baseFileName = pathprefix+'inverse_diff_ff_S2_d30c40_N'+str(Nin)+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_diff_ff_S2_d50c50_N'+str(Nin)+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
@@ -553,8 +554,8 @@ if __name__ == "__main__":
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
         rateEvolve = nengo.Node(rateEvolveFn)                   # reference state evolution
-        rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.03))# delayed reference state evolution
-        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.04)*varFactors[Nobs:] )
+        rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.05))# delayed reference state evolution
+        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.05)*varFactors[Nobs:] )
                                                                 # reference input torque evolution
                                                                 # scale input to network by torque factors
         # input layer from which feedforward weights to ratorOut are computed
