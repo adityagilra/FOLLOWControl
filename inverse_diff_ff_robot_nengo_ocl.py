@@ -63,7 +63,7 @@ testLearnedOn = '_seed2by0.3amplVaryHeights'
 #testLearnedOn = '__'                    # doesn't load any weights if file not found! use with initLearned say.
                                         # the string of inputType and trialClamp used for learning the to-be-tested system 
 saveSpikes = True                       # save spikes if testLearned and saveSpikes
-continueLearning = False                # whether to load old weights and continue learning from there
+continueLearning = True#False                # whether to load old weights and continue learning from there
                                         # doesn't work, maybe save error state, also confirm same encoders/decoders?
                                         # saving weights at the end is always enabled
 zeroLowWeights = False                  # set to zero weights below a certain value
@@ -88,7 +88,7 @@ seedR2 = 4              # another seed for the second layer
                         # as I possibly don't have enough neurons
                         # to tile the input properly (obsolete -- for high dim)
 seedR4 = 5              # for the nengonetexpect layer to generate reference signal
-seedRin = 2
+seedRin = 3#2
 np.random.seed([seedRin])# this seed generates the inpfn below (and non-nengo anything random)
 
 tau = 0.02              # second, synaptic tau
@@ -143,7 +143,7 @@ inputType = 'amplVaryHeights'
 #inputType = 'RLReach3'
 #inputType = 'ShootWriteF'
 filterInp = False
-tauFilt = 2*tau
+tauFilt = tau
 
 # N is the number of state variables in the system, N//2 is number of inputs
 # Nout is the number of observables from the system
@@ -186,7 +186,9 @@ else:
     elif funcType == 'robot2_todorov':
         varFactors = (1.,1.,0.5,0.5,0.5,0.5)                # angleFactors, velocityFactors, torqueFactors
     elif funcType == 'robot2_todorov_gravity':
-        varFactors = (1./2.5,1./2.5,0.05,0.05,0.02,0.02)    # angleFactors, velocityFactors, torqueFactors
+        #varFactors = (1./2.5,1./2.5,0.05,0.05,0.1,0.1)    # angleFactors, velocityFactors, torqueFactors
+        ######## varFactors to scale all vars to reprRadius=1
+        varFactors = (1./2.5,1./2.5,0.15,0.15,0.1,0.1)        # angleFactors, velocityFactors, torqueFactors
     elif funcType == 'robot2XY_todorov_gravity':
         #varFactors = (1.,1.,1.,1.,0.15,0.15,0.125,0.125)    # xyFactors, velocityFactors, torqueFactors
         varFactors = (2.5,2.5,1.2,1.2,0.075,0.075,0.025,0.025)    # xyFactors, velocityFactors, torqueFactors
@@ -202,7 +204,9 @@ if errorLearning:                                       # PES plasticity on
     Tmax = 10000.                                       # second - how long to run the simulation
     continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
-    reprRadiusIn = 0.2                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
+    reprRadiusIn = 1.0                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
+    # with zero bias, at reprRadius, if you want 50Hz, gain=1.685, if 100Hz, gain=3.033, if 400Hz, 40.5
+    nrngain = 40.5
     if recurrentLearning:                               # L2 recurrent learning
         #PES_learning_rate = 9e-1                        # learning rate with excPES_integralTau = Tperiod
         #                                                #  as deltaW actually becomes very small integrated over a cycle!
@@ -215,7 +219,8 @@ if errorLearning:                                       # PES plasticity on
                                                         #  else weight changes cause L2 to follow ref within a cycle, not just error
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
-        Nexc = 500                                     # number of excitatory neurons
+        Nexc = 5000                                     # number of excitatory neurons in recurrent layer
+        Nin = 3000                                      # number of excitatory neurons in input layer
         Tperiod = 1.                                    # second
         if plastDecoders:                               # only decoders are plastic
             Wdyn2 = np.zeros(shape=(N+N//2,N+N//2))
@@ -368,7 +373,8 @@ else:
 if filterInp:
     trange = np.arange(0.,Tmax,dt)
     inpfnarray = np.array([inpfn(t) for t in trange])
-    expfilt = np.exp(-np.arange(0,tauFilt*10,dt)/tauFilt)/tauFilt       # normalized exp. decaying kernel
+    expfilt = np.exp(-np.arange(0,tauFilt*100,dt)/tauFilt)              # normalized exp. decaying kernel
+    expfilt = expfilt/np.sum(expfilt)/dt
     inpfnfiltarray = np.zeros((len(trange),N//2))
     for i in range(N//2):
         inpfnfiltarray[:,i] = np.convolve(inpfnarray[:,i],expfilt)[:len(trange)]*dt
@@ -412,7 +418,7 @@ inputStr = ('_trials' if trialClamp else '') + \
                     ('_seed'+str(seedRin)+'by'+str(inputreduction)+\
                     (inputType if inputType != 'rampLeave' else '')+\
                     ('_filt'+str(tauFilt) if filterInp else ''))
-baseFileName = pathprefix+'inverse_diff_ff_N200_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_diff_ff_S2_d50c50_N'+str(Nin)+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
@@ -548,14 +554,16 @@ if __name__ == "__main__":
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
         rateEvolve = nengo.Node(rateEvolveFn)                   # reference state evolution
-        rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.025))# delayed reference state evolution
+        rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.05))# delayed reference state evolution
         nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.05)*varFactors[Nobs:] )
                                                                 # reference input torque evolution
                                                                 # scale input to network by torque factors
         # input layer from which feedforward weights to ratorOut are computed
-        ratorIn = nengo.Ensemble( 200, dimensions=Nobs, radius=reprRadiusIn,
+        ratorIn = nengo.Ensemble( Nin, dimensions=Nobs, radius=reprRadiusIn,
+                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nin)*nrngain,
                             neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
-        ratorInD = nengo.Ensemble( 200, dimensions=Nobs, radius=reprRadiusIn,
+        ratorInD = nengo.Ensemble( Nin, dimensions=Nobs, radius=reprRadiusIn,
+                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nin)*nrngain,
                             neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
         nengo.Connection(rateEvolve, ratorIn, synapse=None)
         nengo.Connection(rateEvolveD, ratorInD, synapse=None)
@@ -563,6 +571,7 @@ if __name__ == "__main__":
         # layer with learning incorporated
         #intercepts = np.append(np.random.uniform(-0.2,0.2,size=Nexc//2),np.random.uniform(-1.,1.,size=Nexc//2))
         ratorOut = nengo.Ensemble( Nexc, dimensions=N//2, radius=reprRadius,
+                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nexc)*nrngain,
                             neuron_type=nengo.neurons.LIF(), seed=seedR2, label='ratorOut')
         # don't use the same seeds across the connections,
         #  else they seem to be all evaluated at the same values of low-dim variables
@@ -578,12 +587,12 @@ if __name__ == "__main__":
                                                                     # fast synapse for fast-reacting clamp
         
         EtoE = nengo.Connection(ratorInD.neurons, ratorOut.neurons,
-                                    transform=np.zeros((Nexc,200)), synapse=tau)   # synapse is tau_syn for filtering
+                                    transform=np.zeros((Nexc,Nin)), synapse=tau)   # synapse is tau_syn for filtering
 
         # make InEtoE connection after EtoE, so that reprRadius from EtoE
         #  instead of reprRadiusIn from InEtoE is used to compute decoders for ratorOut
         InEtoE = nengo.Connection(ratorIn.neurons, ratorOut.neurons,
-                                    transform=np.zeros((Nexc,200)), synapse=tau)
+                                    transform=np.zeros((Nexc,Nin)), synapse=tau)
                                                                     # Wdyn2 same as for EtoE, but mean(InEtoE) = mean(EtoE)/20
 
         nodeIn_probe = nengo.Probe(nodeIn, synapse=None)
