@@ -63,7 +63,7 @@ testLearnedOn = '_seed2by0.3amplVaryHeights'
 #testLearnedOn = '__'                    # doesn't load any weights if file not found! use with initLearned say.
                                         # the string of inputType and trialClamp used for learning the to-be-tested system 
 saveSpikes = True                       # save spikes if testLearned and saveSpikes
-continueLearning = True#False                # whether to load old weights and continue learning from there
+continueLearning = False                # whether to load old weights and continue learning from there
                                         # doesn't work, maybe save error state, also confirm same encoders/decoders?
                                         # saving weights at the end is always enabled
 zeroLowWeights = False                  # set to zero weights below a certain value
@@ -88,7 +88,7 @@ seedR2 = 4              # another seed for the second layer
                         # as I possibly don't have enough neurons
                         # to tile the input properly (obsolete -- for high dim)
 seedR4 = 5              # for the nengonetexpect layer to generate reference signal
-seedRin = 3#2
+seedRin = 2
 np.random.seed([seedRin])# this seed generates the inpfn below (and non-nengo anything random)
 
 tau = 0.02              # second, synaptic tau
@@ -184,7 +184,9 @@ else:
     elif funcType == 'robot2_todorov':
         varFactors = (1.,1.,0.5,0.5,0.5,0.5)                # angleFactors, velocityFactors, torqueFactors
     elif funcType == 'robot2_todorov_gravity':
-        varFactors = (1./2.5,1./2.5,0.05,0.05,0.02,0.02)    # angleFactors, velocityFactors, torqueFactors
+        #varFactors = (1./2.5,1./2.5,0.05,0.05,0.02,0.02)    # angleFactors, velocityFactors, torqueFactors
+            ######## varFactors to scale all vars to reprRadius=1
+        varFactors = (1./2.5,1./2.5,0.15,0.15,0.1,0.1)    # angleFactors, velocityFactors, torqueFactors
     elif funcType == 'robot2XY_todorov_gravity':
         #varFactors = (1.,1.,1.,1.,0.15,0.15,0.125,0.125)    # xyFactors, velocityFactors, torqueFactors
         varFactors = (2.5,2.5,1.2,1.2,0.075,0.075,0.025,0.025)    # xyFactors, velocityFactors, torqueFactors
@@ -200,7 +202,9 @@ if errorLearning:                                       # PES plasticity on
     Tmax = 10000.                                       # second - how long to run the simulation
     continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
-    reprRadiusIn = 0.2                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
+    reprRadiusIn = 1.0                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
+    # with zero bias, at reprRadius, if you want 50Hz, gain=1.685, if 100Hz, gain=3.033, if 400Hz, 40.5
+    nrngain = 40.5
     if recurrentLearning:                               # L2 recurrent learning
         #PES_learning_rate = 9e-1                        # learning rate with excPES_integralTau = Tperiod
         #                                                #  as deltaW actually becomes very small integrated over a cycle!
@@ -213,7 +217,7 @@ if errorLearning:                                       # PES plasticity on
                                                         #  else weight changes cause L2 to follow ref within a cycle, not just error
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
-        Nexc = 3000                                     # number of excitatory neurons
+        Nexc = 450                                     # number of excitatory neurons
         Tperiod = 1.                                    # second
         if plastDecoders:                               # only decoders are plastic
             Wdyn2 = np.zeros(shape=(N+N//2,N+N//2))
@@ -396,7 +400,7 @@ else:
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
         ('_seed'+str(seedRin)+'by'+str(inputreduction)+inputType if inputType != 'rampLeave' else '')
-baseFileName = pathprefix+'inverse_ff_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_ff_S2_c50'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
@@ -537,12 +541,14 @@ if __name__ == "__main__":
                                                                 # scale input to network by torque factors
         # input layer from which feedforward weights to ratorOut are computed
         ratorIn = nengo.Ensemble( Nexc, dimensions=Nobs, radius=reprRadiusIn,
+                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nexc)*nrngain,
                             neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
         nengo.Connection(rateEvolve, ratorIn, synapse=None)
                                                                 # No filtering here as no filtering/delay in the plant/arm
         # layer with learning incorporated
         #intercepts = np.append(np.random.uniform(-0.2,0.2,size=Nexc//2),np.random.uniform(-1.,1.,size=Nexc//2))
         ratorOut = nengo.Ensemble( Nexc, dimensions=N//2, radius=reprRadius,
+                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nexc)*nrngain,
                             neuron_type=nengo.neurons.LIF(), seed=seedR2, label='ratorOut')
         # don't use the same seeds across the connections,
         #  else they seem to be all evaluated at the same values of low-dim variables

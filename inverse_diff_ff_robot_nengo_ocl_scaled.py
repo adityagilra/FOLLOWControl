@@ -63,7 +63,7 @@ testLearnedOn = '_seed2by0.3amplVaryHeights'
 #testLearnedOn = '__'                    # doesn't load any weights if file not found! use with initLearned say.
                                         # the string of inputType and trialClamp used for learning the to-be-tested system 
 saveSpikes = True                       # save spikes if testLearned and saveSpikes
-continueLearning = False                # whether to load old weights and continue learning from there
+continueLearning = True#False                # whether to load old weights and continue learning from there
                                         # doesn't work, maybe save error state, also confirm same encoders/decoders?
                                         # saving weights at the end is always enabled
 zeroLowWeights = False                  # set to zero weights below a certain value
@@ -88,7 +88,7 @@ seedR2 = 4              # another seed for the second layer
                         # as I possibly don't have enough neurons
                         # to tile the input properly (obsolete -- for high dim)
 seedR4 = 5              # for the nengonetexpect layer to generate reference signal
-seedRin = 2
+seedRin = 3#2
 np.random.seed([seedRin])# this seed generates the inpfn below (and non-nengo anything random)
 
 tau = 0.02              # second, synaptic tau
@@ -219,8 +219,8 @@ if errorLearning:                                       # PES plasticity on
                                                         #  else weight changes cause L2 to follow ref within a cycle, not just error
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
-        Nexc = 500                                     # number of excitatory neurons in recurrent layer
-        Nin = 200                                      # number of excitatory neurons in input layer
+        Nexc = 5000                                     # number of excitatory neurons in recurrent layer
+        Nin = 3000                                      # number of excitatory neurons in input layer
         Tperiod = 1.                                    # second
         if plastDecoders:                               # only decoders are plastic
             Wdyn2 = np.zeros(shape=(N+N//2,N+N//2))

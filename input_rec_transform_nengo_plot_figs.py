@@ -1272,7 +1272,7 @@ def get_MSE(baseFileName):
         Tmax = data_dict['Tmax']
         Tperiod = data_dict['Tperiod']
         dt = data_dict['dt']
-        err = data_dict['error_p']
+        err = data_dict['error']
         N = err.shape[1]                                        # number of error dimensions
         # remove the Tnolearning period where error is forced to zero
         Tnolearning = 4*Tperiod
@@ -2495,7 +2495,126 @@ def fig_inverse_compare(datafiles,file_end=''):
     fig.tight_layout()
     fig.savefig('figures/archi_compare'+file_end+'.pdf',dpi=fig_dpi)
     print("done saving figure comparing architectures")
+
+def fig_inverse_compare_v2(datafiles,file_end=''):
+    fig = plt.figure(facecolor='w',figsize=(columnwidth*2., columnwidth),dpi=fig_dpi)
+
+    for num,filelist in enumerate(datafiles):
+        filebase = filelist[0]
+        ax1 = plt.subplot(3,3,num+4)
+        ax2 = plt.subplot(3,3,num+7)
+        # with ensures that the file is closed at the end / if error
+        errtest,errtrain = get_MSE(filebase+'_end.shelve')
+        print (num,errtest,errtrain)
+        with contextlib.closing(
+                shelve.open(datapath+filebase+'_end.shelve', 'r')
+                ) as data_dict:
+
+            trange = data_dict['trange']
+            Tmax = data_dict['Tmax']
+            rampT = data_dict['rampT']
+            Tperiod = data_dict['Tperiod']
+            dt = data_dict['dt']
+            tau = data_dict['tau']
+            errorLearning = data_dict['errorLearning']
+            spikingNeurons = data_dict['spikingNeurons']
+            target = data_dict['ratorOut']
+            output = data_dict['ratorOut2']
+            err = -data_dict['error']                       # Definition of error in paper is now ref-pred, hence -ve here
+
+        tstart = int(Tperiod/dt)
+        tcut = -int(4*Tperiod/dt)
+        # plot the mean squared error, except for the start Tperiod and end 4*Tperiods, since no learning there.
+        points_per_bin = int(Tperiod/dt)
+        ax1.plot(trange[tstart:tcut:points_per_bin], \
+                    np.sum(err[tstart:tcut]**2,axis=1).reshape((-1,points_per_bin)).mean(axis=1),\
+                    color='k', linewidth=plot_linewidth)
+        ax1.set_xlim([-500,ax1.get_xlim()[1]])
+        ax1.set_yscale('log')
+        # plot the predicted x_hat and reference x
+        trange_end = trange[tcut:]                          # data only for end 4 Tperiods
+        ax2.plot(trange_end-trange_end[0], output[tcut:,1], color='r',
+                            linewidth=plot_linewidth, label=' out')
+        ax2.plot(trange_end-trange_end[0], target[tcut:,1], color='b',
+                            linewidth=plot_linewidth/1.5, label='ref')
+        # mean squared error during test
+        ax2.text(0.5,0.9,str(errtest),
+                    transform=ax2.transAxes,
+                    color='k', fontsize=label_fontsize)
+
+        beautify_plot(ax1,x0min=False,y0min=False)
+        beautify_plot(ax2,x0min=False,y0min=False)
+        axes_labels(ax1,'time (s)','mean error$^2$',xpad=-6,ypad=3)
+        axes_labels(ax2,'time (s)','$\hat{u}_2,u_2$',xpad=-3,ypad=-3)
+    fig.tight_layout()
+    fig.savefig('figures/archi_compare_v2'+file_end+'.pdf',dpi=fig_dpi)
+    print("done saving figure comparing architectures")
         
+def fig_difftau_causaltau(datafiles):
+    fig = plt.figure(facecolor='w',figsize=(columnwidth, columnwidth*3/4),dpi=fig_dpi)
+    ax = fig.add_subplot(111,projection='3d')
+
+    weft_lines = [[[],[],[]],[[],[],[]],[[],[],[]],[[],[],[]],[[],[],[]]]
+    for num,filelist in enumerate(datafiles):
+        warp_line = [[],[],[]]
+        for num2,(x,y,filename) in enumerate(filelist):
+            mserrtest,mserrtrainend = get_MSE(filename+'_end.shelve')
+            warp_line[0].append(x)
+            warp_line[1].append(y)
+            warp_line[2].append(mserrtest)
+            weft_lines[num2][0].append(x)
+            weft_lines[num2][1].append(y)
+            weft_lines[num2][2].append(mserrtest)
+        ax.plot(warp_line[0],warp_line[1],warp_line[2],c='b')
+        print(warp_line)
+        if x==50 and y==50: ax.scatter(x,y,mserrtest,\
+                    edgecolors='b',facecolors='b',marker='*',s=15,clip_on=False)
+    for x,y,z in weft_lines:
+        ax.plot(x,y,z,c='b')
+    ax.set_zlabel('$\langle err^2 \\rangle_{N_d,t}$',labelpad=-5)
+    beautify_plot3d(ax,x0min=False,y0min=False)
+    axes_labels(ax,'differential $\Delta$ (ms)','causal $\Delta_u$ (ms)',xpad=-3,ypad=-3)
+    fig.tight_layout()
+    fig.savefig('figures/difftau_causaltau.pdf',dpi=fig_dpi)    
+
+def fig_torquefilt(datafiles):
+    fig = plt.figure(facecolor='w',figsize=(columnwidth, columnwidth*3/4),dpi=fig_dpi)
+    ax = fig.add_subplot(111)
+
+    filttau_list = []
+    mserrlist = []
+    for num,(taufilt,filename) in enumerate(datafiles):
+        mserrtest,mserrtrainend = get_MSE(filename+'_end.shelve')
+        filttau_list.append(taufilt)
+        mserrlist.append(mserrtest)
+    ax.plot(filttau_list,mserrlist,c='k')
+    ax.scatter(filttau_list,mserrlist,c='k',s=10,clip_on=False)
+    ax.set_xlim([0,80])
+    ax.set_ylim([0.000,0.025])
+    beautify_plot(ax,x0min=True,y0min=False)
+    axes_labels(ax,'torque filtering $\\tau$ (ms)','$\langle err^2 \\rangle_{N_d,t}$',xpad=-2,ypad=-2)
+    fig.tight_layout()
+    fig.savefig('figures/err_vs_torquefilt.pdf',dpi=fig_dpi)
+
+def fig_reclearning(datafiles):
+    fig = plt.figure(facecolor='w',figsize=(columnwidth, columnwidth*3/4),dpi=fig_dpi)
+    ax = fig.add_subplot(111)
+
+    learningrate_list = []
+    mserrlist = []
+    for num,(learningrate,filename) in enumerate(datafiles):
+        mserrtest,mserrtrainend = get_MSE(filename+'_end.shelve')
+        learningrate_list.append(learningrate)
+        mserrlist.append(mserrtest)
+    ax.plot(learningrate_list,mserrlist,c='k')
+    ax.scatter(learningrate_list,mserrlist,c='k',s=10,clip_on=False)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    beautify_plot(ax,x0min=False,y0min=False)
+    axes_labels(ax,'recurrent learning rate','$\langle err^2 \\rangle_{N_d,t}$',xpad=-2,ypad=-2)
+    fig.tight_layout()
+    fig.savefig('figures/err_vs_reclearning.pdf',dpi=fig_dpi)
+
 
 if __name__ == "__main__":
     # for first figure showing example spiking
@@ -2680,15 +2799,19 @@ if __name__ == "__main__":
     ## inverse model with only recurrent learning -- NIPS obsolete
     ##fig_inverse_nips('inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_3000.0s',
     ##                'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom3000.0_seed2by0.3RLSwing_10.0s')
-    # inverse model with only recurrent learning
-    #fig_inverse_nips('inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s',
-    #                'inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom4000.0_seed2by0.3RLSwing_10.0s',
-    #                '_rec')
-    # inverse model with only diff-ff learning
-    #fig_inverse_nips(('inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
-    #                'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_continueFrom50000.0_seed7by0.3amplVaryHeights_10000.0s'),
-    #                'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom60000.0_seed2by0.3RLSwing_10.0s',
-    #                '_diff-ff',50000)
+    ## inverse model with only recurrent learning
+    ##fig_inverse_nips('inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s',
+    ##                'inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom4000.0_seed2by0.3RLSwing_10.0s',
+    ##                '_rec')
+    ## inverse model with only diff-ff learning -- Obsolete, as I used const gain, scaled varFactors, see next function call below
+    ##fig_inverse_nips(('inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
+    ##                'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_continueFrom50000.0_seed7by0.3amplVaryHeights_10000.0s'),
+    ##                'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom60000.0_seed2by0.3RLSwing_10.0s',
+    ##                '_diff-ff',50000)
+    # inverse model with only diff-ff learning -- with const gain, scaled varFactors, d30c40
+    #fig_inverse_nips('inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
+    #                '../data/inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLSwing_10.0s',
+    #                '_diff-ff',0)
     
     #fig_inverse_compare([['inverse_diff_ff_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
     #                    ['inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s'],
@@ -2697,7 +2820,12 @@ if __name__ == "__main__":
     #                    ['inverse_ff_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
     #                    ['inverse_Mdiff_ff_N100_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']])
 
-    #fig_inverse_compare(# usual 2e-3 learning rate, but note that seeRin=3 was used here, whereas 2 is the default everywhere else
+    #fig_inverse_compare_v2([['inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    ['inverse_Ddiff_ff_S2_c40_ocl_Nexc900_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    ['inverse_ff_S2_c40_ocl_Nexc450_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']])
+
+    # backprop comparisons
+    #fig_inverse_compare(# usual 2e-3 learning rate, but note that seedRin=3 was used here, whereas 2 is the default everywhere else
     #                    [['inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed3by0.3amplVaryHeights_10000.0s'],
     #                    # 2e-3 / 2.5 learning rate
     #                    ['inverse_rep_eta2_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
@@ -2711,4 +2839,61 @@ if __name__ == "__main__":
     #                    ['inverse_diff_ff_N200_50ms_DL_Nexc500_softLIF_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']],
     #                    file_end='_extras')
     
+    # 3D plot of mean squared error versus different differential tau-s and causal tau-s
+    # Note that the filenames are not all consistent in the _S2_d..c.._N200 format
+    fig_difftau_causaltau((#[(10,20,'inverse_diff_ff_S2_d10c20200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+                        [(10,30,'inverse_diff_ff_S2_d10c30_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (15,30,'inverse_diff_ff_S2_d15c30200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (20,30,'inverse_diff_ff_S2_d20c30_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (25,30,'inverse_diff_ff_S2_d25c30_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (30,30,'inverse_diff_ff_S2_d30c30_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+                        [(10,40,'inverse_diff_ff_S2_d10c40200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (20,40,'inverse_diff_ff_S2_d20c40200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (30,40,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (35,40,'inverse_diff_ff_S2_d35c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (40,40,'inverse_diff_ff_S2_d40c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+                       [(10,50,'inverse_diff_ff_S2_d10c50200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (25,50,'inverse_diff_ff_S2200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (40,50,'inverse_diff_ff_S2_d40c50_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (45,50,'inverse_diff_ff_S2_d45c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (50,50,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+                        [(10,60,'inverse_diff_ff_S2_d10c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            #(20,60,'inverse_diff_ff_S2_d20c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (30,60,'inverse_diff_ff_S2_d30c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            #(40,60,'inverse_diff_ff_S2_d40c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (50,60,'inverse_diff_ff_S2_d50c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (55,60,'inverse_diff_ff_S2_d55c60_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (60,60,'inverse_diff_ff_S2_d60c60_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+                        [(10,80,'inverse_diff_ff_S2_d10c80_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (40,80,'inverse_diff_ff_S2_d40c80_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (70,80,'inverse_diff_ff_S2_d70c80_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (75,80,'inverse_diff_ff_S2_d75c80_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (80,80,'inverse_diff_ff_S2_d80c80_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+                        [(10,100,'inverse_diff_ff_S2_d10c100_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (50,100,'inverse_diff_ff_S2_d50c100_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (90,100,'inverse_diff_ff_S2_d90c100_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (95,100,'inverse_diff_ff_S2_d95c100_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+                            (100,100,'inverse_diff_ff_S2_d100c100_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')]
+                        ))
+
+    #fig_torquefilt(((0,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                (5,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.005_10000.0s'),
+    #                (10,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.01_10000.0s'),
+    #                (20,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.02_10000.0s'),
+    #                (30,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.03_10000.0s'),
+    #                (40,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.04_10000.0s'),
+    #                (50,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.05_10000.0s'),
+    #                (60,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.06_10000.0s'),
+    #                (70,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.07_10000.0s'),
+    #                (80,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.08_10000.0s')
+    #                ))
+
+    #fig_reclearning((
+    #                (2e-3,'inverse_rec_goodenc_tau20.20_eta1000_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #                (2e-4,'inverse_rec_goodenc_tau20.20_eta1000by10_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #                (1e-4,'inverse_rec_goodenc_tau20.20_eta1000by20_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #                (2e-5,'inverse_rec_goodenc_tau20.20_eta1000by100_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #                (1e-10,'inverse_rec_goodenc_tau20.20_eta1000byinf_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s')
+    #                ))
+
     #plt.show()     # don't use this when running anim_robot() - gives a weird large interactive slow plot

@@ -184,7 +184,8 @@ else:
     elif funcType == 'robot2_todorov':
         varFactors = (1.,1.,0.5,0.5,0.5,0.5)                # angleFactors, velocityFactors, torqueFactors
     elif funcType == 'robot2_todorov_gravity':
-        varFactors = (1./2.5,1./2.5,0.05,0.05,0.02,0.02)    # angleFactors, velocityFactors, torqueFactors
+        #varFactors = (1./2.5,1./2.5,0.05,0.05,0.02,0.02)    # angleFactors, velocityFactors, torqueFactors
+        varFactors = (1./2.5,1./2.5,0.15,0.15,0.1,0.1)    # angleFactors, velocityFactors, torqueFactors
     elif funcType == 'robot2XY_todorov_gravity':
         #varFactors = (1.,1.,1.,1.,0.15,0.15,0.125,0.125)    # xyFactors, velocityFactors, torqueFactors
         varFactors = (2.5,2.5,1.2,1.2,0.075,0.075,0.025,0.025)    # xyFactors, velocityFactors, torqueFactors
@@ -200,7 +201,9 @@ if errorLearning:                                       # PES plasticity on
     Tmax = 10000.                                       # second - how long to run the simulation
     continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
-    reprRadiusIn = 0.2                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
+    reprRadiusIn = 1.0                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
+    # with zero bias, at reprRadius, if you want 50Hz, gain=1.685, if 100Hz, gain=3.033, if 400Hz, 40.5
+    nrngain = 40.5
     if recurrentLearning:                               # L2 recurrent learning
         #PES_learning_rate = 9e-1                        # learning rate with excPES_integralTau = Tperiod
         #                                                #  as deltaW actually becomes very small integrated over a cycle!
@@ -208,12 +211,12 @@ if errorLearning:                                       # PES plasticity on
             PES_learning_rate_rec = 1e-10               # effectively no learning
             PES_learning_rate_FF = 1e-10                # effectively no learning
         else:
-            PES_learning_rate_FF = 0.5#2e-3                 # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+            PES_learning_rate_FF = 10                   # learning on Node to Neurons, hence larger rate (nengo must be hacked to allow this)
             PES_learning_rate_rec = 2e-3                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
                                                         #  else weight changes cause L2 to follow ref within a cycle, not just error
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
-        Nexc = 25000                                     # number of excitatory neurons
+        Nexc = 900                                     # number of excitatory neurons
         Tperiod = 1.                                    # second
         if plastDecoders:                               # only decoders are plastic
             Wdyn2 = np.zeros(shape=(N+N//2,N+N//2))
@@ -396,7 +399,7 @@ else:
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
         ('_seed'+str(seedRin)+'by'+str(inputreduction)+inputType if inputType != 'rampLeave' else '')
-baseFileName = pathprefix+'inverse_Ddiff_ff_40ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_Ddiff_ff_S2_d50c50'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
@@ -532,13 +535,14 @@ if __name__ == "__main__":
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
         rateEvolve = nengo.Node(rateEvolveFn)                   # reference state evolution
-        rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.02))# delayed reference state evolution
-        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.04)*varFactors[Nobs:] )
+        rateEvolveD = nengo.Node(lambda t: rateEvolveFn(t-0.05))# delayed reference state evolution
+        nodeIn = nengo.Node( size_in=N//2, output = lambda timeval,currval: inpfn(timeval-0.05)*varFactors[Nobs:] )
                                                                 # reference input torque evolution
                                                                 # scale input to network by torque factors
         # layer with learning incorporated
         #intercepts = np.append(np.random.uniform(-0.2,0.2,size=Nexc//2),np.random.uniform(-1.,1.,size=Nexc//2))
         ratorOut = nengo.Ensemble( Nexc, dimensions=N//2, radius=reprRadius,
+                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nexc)*nrngain,
                             neuron_type=nengo.neurons.LIF(), seed=seedR2, label='ratorOut')
         # don't use the same seeds across the connections,
         #  else they seem to be all evaluated at the same values of low-dim variables
