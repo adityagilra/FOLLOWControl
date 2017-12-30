@@ -144,7 +144,7 @@ inputType = 'amplVaryHeights'
 #inputType = 'RLReach3'
 #inputType = 'ShootWriteF'
 filterInp = False
-tauFilt = 2*tau
+tauFilt = tau
 
 # N is the number of state variables in the system, N//2 is number of inputs
 # Nout is the number of observables from the system
@@ -187,7 +187,7 @@ else:
     elif funcType == 'robot2_todorov':
         varFactors = (1.,1.,0.5,0.5,0.5,0.5)                # angleFactors, velocityFactors, torqueFactors
     elif funcType == 'robot2_todorov_gravity':
-        varFactors = (1./2.5,1./2.5,0.2,0.2,0.1,0.1)    # angleFactors, velocityFactors, torqueFactors
+        varFactors = (1./2.5,1./2.5,0.15,0.15,0.1,0.1)    # angleFactors, velocityFactors, torqueFactors
     elif funcType == 'robot2XY_todorov_gravity':
         #varFactors = (1.,1.,1.,1.,0.15,0.15,0.125,0.125)    # xyFactors, velocityFactors, torqueFactors
         varFactors = (2.5,2.5,1.2,1.2,0.075,0.075,0.025,0.025)    # xyFactors, velocityFactors, torqueFactors
@@ -200,7 +200,7 @@ else:
 ### recurrent and feedforward connection matrices ###
 ###
 if errorLearning:                                       # PES plasticity on
-    Tmax = 500.                                        # second - how long to run the simulation
+    Tmax = 1000.                                        # second - how long to run the simulation
     continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
     # with zero bias, at reprRadius, if you want 50Hz, gain=1.685, if 100Hz, gain=3.033, if 400Hz, 40.5
@@ -212,8 +212,8 @@ if errorLearning:                                       # PES plasticity on
             PES_learning_rate_ff = 1e-10                # effectively no learning
             PES_learning_rate_rec = 1e-10               # effectively no learning
         else:
-            PES_learning_rate_ff = 1000.                  # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
-            PES_learning_rate_rec = 1e-10#2e-3                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
+            PES_learning_rate_ff = 1.                # 10 or 100 or 1000 for Node to Neurons
+            PES_learning_rate_rec = 2e-3/1000                # 2e-2 works for linear rec learning, but too high for non-linear, 2e-3 is good
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
         Nexc = 900                                    # number of excitatory neurons
@@ -369,7 +369,8 @@ else:
 if filterInp:
     trange = np.arange(0.,Tmax,dt)
     inpfnarray = np.array([inpfn(t) for t in trange])
-    expfilt = np.exp(-np.arange(0,tauFilt*10,dt)/tauFilt)/tauFilt       # normalized exp. decaying kernel
+    expfilt = np.exp(-np.arange(0,tauFilt*100,dt)/tauFilt)              # exp. decaying kernel
+    expfilt = expfilt/np.sum(expfilt)/dt                                # very important to numerically normalize, than the analytical /tau
     inpfnfiltarray = np.zeros((len(trange),N//2))
     for i in range(N//2):
         inpfnfiltarray[:,i] = np.convolve(inpfnarray[:,i],expfilt)[:len(trange)]*dt
@@ -413,7 +414,7 @@ inputStr = ('_trials' if trialClamp else '') + \
                     ('_seed'+str(seedRin)+'by'+str(inputreduction)+\
                     (inputType if inputType != 'rampLeave' else '')+\
                     ('_filt'+str(tauFilt) if filterInp else ''))
-baseFileName = pathprefix+'inverse_rec_goodenc_tau20.20_eta1000byinf_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_rec_goodenc_tau20.20_eta1by1000_50ms'+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_directu_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \

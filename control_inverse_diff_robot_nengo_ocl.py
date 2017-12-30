@@ -58,11 +58,16 @@ funcType = 'robot2_todorov_gravity'     # if learnFunction, then robot two-link 
 
 #pathprefix = '/lcncluster/gilra/tmp/'
 pathprefix = '../data/'
-weightsLoadFileName = 'inverse_diff_ff_S2_d30c40_N3000_ocl_Nexc5000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s_endweights.shelve'
+Nin = 200
+Nexc = 500
+filtStr = '_filt0.02'
+endStr = '_50000.0s'
+weightsLoadFileName = 'inverse_diff_ff_S2_d50c50_N'+str(Nin)+'_ocl_Nexc'+str(Nexc)+'_norefinptau_seeds2345'+filtStr+'_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights'+endStr+'_endweights.shelve'
+#weightsLoadFileName = 'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_50000.0s_endweights.shelve'
 #trajectoryFileName = 'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom3000.0_seed2by0.3RLSwing_10.0s_start'
 #trajectoryFileName = 'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLReach3_10.0s_start'
-#trajectoryFileName = 'robot2_todorov_gravity_traj_v2_star'
-trajectoryFileName = 'robot2_todorov_gravity_traj_v2_diamond'
+trajectoryFileName = 'robot2_todorov_gravity_traj_v2_star'
+#trajectoryFileName = 'robot2_todorov_gravity_traj_v2_diamond'
 weightsLoadFileName = pathprefix + weightsLoadFileName
 trajectoryFileName = pathprefix + trajectoryFileName
 
@@ -151,8 +156,6 @@ if errorLearning:                                       # PES plasticity on
     nrngain = 40.5
     if 'acrobot' in funcType: inputreduction = 0.5      # input reduction factor
     else: inputreduction = 0.3                          # input reduction factor
-    Nin = 3000
-    Nexc = 5000                                         # number of excitatory neurons
     Tperiod = 1.                                        # second
 
 reprRadiusErr = 0.2                                     # with error feedback, error is quite small
@@ -172,7 +175,7 @@ Tclamp = 0.25                                           # time to clamp the ref,
 if errorLearning:
     errorAverage = False                    # whether to average error over the Tperiod scale
                                             # Nopes, this won't make it learn the intricate dynamics
-    errorFeedbackGain = 3.                  # Feedback gain
+    errorFeedbackGain = 0.                  # Feedback gain
                                             # below a gain of ~5, exc rates go to max, weights become large
     weightErrorTau = 10*tau                 # filter the error to the PES weight update rule
     errorFeedbackTau = 2*tau                # synaptic tau for the error signal into layer2.ratorOut
@@ -239,8 +242,8 @@ if __name__ == "__main__":
     mainModel = nengo.Network(label="Single layer network", seed=seedR0)
     with mainModel:
         nodeIn = nengo.Node(desiredStateFn)                             # reference state evolution
-        nodeInD = nengo.Node(lambda t: desiredStateFn(t-0.03))         # delayed reference state evolution
-        nodeInTarget = nengo.Node(lambda t: desiredStateFn(t-0.04))     # target for error feedback (even more delayed) reference state evolution
+        nodeInD = nengo.Node(lambda t: desiredStateFn(t-0.05))         # delayed reference state evolution
+        nodeInTarget = nengo.Node(lambda t: desiredStateFn(t-0.05))     # target for error feedback (even more delayed) reference state evolution
         # input layer from which feedforward weights to ratorOut are computed
         ratorIn = nengo.Ensemble( Nin, dimensions=Nobs, radius=reprRadiusIn,
                             bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nin)*nrngain,

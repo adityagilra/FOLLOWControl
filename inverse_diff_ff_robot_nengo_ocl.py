@@ -88,7 +88,7 @@ seedR2 = 4              # another seed for the second layer
                         # as I possibly don't have enough neurons
                         # to tile the input properly (obsolete -- for high dim)
 seedR4 = 5              # for the nengonetexpect layer to generate reference signal
-seedRin = 3#2
+seedRin = 6#2
 np.random.seed([seedRin])# this seed generates the inpfn below (and non-nengo anything random)
 
 tau = 0.02              # second, synaptic tau
@@ -202,7 +202,7 @@ else:
 ###
 if errorLearning:                                       # PES plasticity on
     Tmax = 10000.                                       # second - how long to run the simulation
-    continueTmax = 10000.                               # if continueLearning, then start with weights from continueTmax
+    continueTmax = 40000.                               # if continueLearning, then start with weights from continueTmax
     reprRadius = 1.0                                    # neurons represent (-reprRadius,+reprRadius)
     reprRadiusIn = 1.0                                  # input is integrated in ratorOut, so keep it smaller than reprRadius
     # with zero bias, at reprRadius, if you want 50Hz, gain=1.685, if 100Hz, gain=3.033, if 400Hz, 40.5
@@ -219,8 +219,8 @@ if errorLearning:                                       # PES plasticity on
                                                         #  else weight changes cause L2 to follow ref within a cycle, not just error
         if 'acrobot' in funcType: inputreduction = 0.5  # input reduction factor
         else: inputreduction = 0.3                      # input reduction factor
-        Nexc = 5000                                     # number of excitatory neurons in recurrent layer
-        Nin = 3000                                      # number of excitatory neurons in input layer
+        Nexc = 500                                     # number of excitatory neurons in recurrent layer
+        Nin = 200                                      # number of excitatory neurons in input layer
         Tperiod = 1.                                    # second
         if plastDecoders:                               # only decoders are plastic
             Wdyn2 = np.zeros(shape=(N+N//2,N+N//2))
@@ -373,8 +373,8 @@ else:
 if filterInp:
     trange = np.arange(0.,Tmax,dt)
     inpfnarray = np.array([inpfn(t) for t in trange])
-    expfilt = np.exp(-np.arange(0,tauFilt*100,dt)/tauFilt)              # normalized exp. decaying kernel
-    expfilt = expfilt/np.sum(expfilt)/dt
+    expfilt = np.exp(-np.arange(0,tauFilt*100,dt)/tauFilt)              # exp. decaying kernel
+    expfilt = expfilt/np.sum(expfilt)/dt                                # very important to numerically normalize, than the analytical /tau
     inpfnfiltarray = np.zeros((len(trange),N//2))
     for i in range(N//2):
         inpfnfiltarray[:,i] = np.convolve(inpfnarray[:,i],expfilt)[:len(trange)]*dt
@@ -416,10 +416,10 @@ else:
 pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
                     ('_seed'+str(seedRin)+'by'+str(inputreduction)+\
-                    (inputType if inputType != 'rampLeave' else '')+\
-                    ('_filt'+str(tauFilt) if filterInp else ''))
+                    (inputType if inputType != 'rampLeave' else ''))
 baseFileName = pathprefix+'inverse_diff_ff_S2_d50c50_N'+str(Nin)+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
+                    ('_filt'+str(tauFilt) if filterInp else '') + \
                     ('_inhibition' if inhibition else '') + \
                     ('_zeroLowWeights' if zeroLowWeights else '') + \
                     '_weightErrorCutoff'+str(weightErrorCutoff) + \

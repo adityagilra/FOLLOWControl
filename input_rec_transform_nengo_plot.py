@@ -74,7 +74,7 @@ def rates_CVs(spikesOut,trange,tCutoff,tMax,dt):
     CV = CV[CV!=100.]
     return rate,CV
 
-def plot_data(dataFileName,endTag):
+def plot_data(axlist,dataFileName,endTag):
     print('reading data from',dataFileName+endTag+'.shelve')
     #data_dict = pickle.load( open( "/lcncluster/gilra/tmp/rec_learn_data.pickle", "rb" ) )
     # with ensures that the file is closed at the end / if error
@@ -105,7 +105,6 @@ def plot_data(dataFileName,endTag):
         else: N = 2
 
         print('plotting data')
-        plt.figure(facecolor='w',figsize=(8*2, 6*2))            # default figsize=(8,6)
 
         ### Plot Nengo network
         #EtoIdecvec = sim.data[EtoIdec]
@@ -123,10 +122,7 @@ def plot_data(dataFileName,endTag):
         #yinh2 = data_dict['inhibrator2']
         rateEvolve = data_dict['rateEvolve']
 
-        ax = plt.subplot(2,2,1)
-        ax2 = plt.subplot(2,2,3)
-        ax3 = plt.subplot(2,2,2)
-        ax4 = plt.subplot(2,2,4)
+        ax,ax2,ax3,ax4 = axlist
         #cnames = mpl.colors.cnames.values()                    # very similar colors grouped together
         cnames = ['r','g','b','c','m','y','k','olive','chocolate','lawngreen']
         if errorLearning:
@@ -648,12 +644,12 @@ def plot_error_fulltime(dataFileName):
         # bin squared error into every Tperiod
         numbins = int(Tmax/Tperiod)
 
-        fig = plt.figure(facecolor='w')
-        ax = plt.subplot(111)
+        fig = plt.figure(facecolor='w',figsize=(20, 6))
+        ax = plt.subplot(131)
         ax.plot(trange, np.linalg.norm(err,axis=1), linewidth=plot_linewidth)
+        axes_labels(ax,'time (s)','|error|',xpad=-6,ypad=-7)
 
-        fig = plt.figure(facecolor='w')
-        ax = plt.subplot(111)
+        ax = plt.subplot(132)
         # mean error (not mean squared error as below)
         points_per_bin = int(NperiodsAverage*Tperiod/dt)
         if 'Lorenz' in dataFileName: N = 3
@@ -678,8 +674,7 @@ def plot_error_fulltime(dataFileName):
         axes_labels(ax,'time (s)','error mean ('+str(NperiodsAverage)+'*Tperiod)',xpad=-6,ypad=-7)
         axes_labels(ax2,'time (s)','error$^2$',xpad=-6,ypad=3)
 
-        fig = plt.figure(facecolor='w')
-        ax = plt.subplot(111)
+        ax = plt.subplot(133)
         for i in range(N):
             miderr = len(err)//2                    # python3 doesn't do integer division by default, use //
             erri = err[miderr:,i]
@@ -695,11 +690,18 @@ def plot_error_fulltime(dataFileName):
             print("Mean noise in dimension",i,"per time point in 2nd half of the sim is",erri.mean())
         axes_labels(ax,'time (s)','error',xpad=-6,ypad=-7)
         ax.set_title('error Tperiod histogram (end half sim)')
+        
+        fig.subplots_adjust(top=0.9,left=0.1,right=0.95,bottom=0.1,hspace=0.05,wspace=0.55)
 
 def plot_rec_nengo_all(dataFileName):
     if 'algo' not in dataFileName:
-        plot_data(dataFileName,'_start')
-        plot_data(dataFileName,'_end')
+        fig = plt.figure(facecolor='w',figsize=(8*2, 6*2))            # default figsize=(8,6)
+        ax1 = fig.add_subplot(2,2,1)
+        ax2 = fig.add_subplot(2,2,2)
+        ax3 = fig.add_subplot(2,2,3)
+        ax4 = fig.add_subplot(2,2,4)
+        plot_data([ax1,ax3,None,None],dataFileName,'_start')
+        plot_data([ax2,ax4,None,None],dataFileName,'_end')
         plot_error_fulltime(dataFileName+'_end.shelve')
 
         ## .h5 is only for general system - robot arm, others use .shelve
@@ -754,7 +756,7 @@ if __name__ == "__main__":
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_inhdecay100_excdecay100_bothTau2_PES2e-3_learn_rec_clip<0_initLearned_func_400.0s_nostim")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_gain10_inhdecay40_bothTau2_PES1e-3_learn_rec_clip<0_func_6000.0s_kickStart")
     #plot_rec_nengo_all("../data/rec_learn_data_wtf_Nexc2000_seeds0333_nodeerr_learn_rec_func_LinOsc_3000.0s")
-    plot_rec_nengo_all("../data/inverse_diff_ff_S2_d35c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s")
+    plot_rec_nengo_all("../data/inverse_ff_rec_c50ms_etabyinf_ocl_Nexc450_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_3000.0s")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_learn_ff_None_noinh_noErrFB_1200.0s_final.shelve")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_learn_ff_None_noinh_noErrFB_func_1200.0s_final.shelve")
     #plot_rec_nengo_all("/lcncluster/gilra/tmp/rec_learn_data_learn_ff_clip<0_noinh_noErrFB_400.0s_final.shelve")

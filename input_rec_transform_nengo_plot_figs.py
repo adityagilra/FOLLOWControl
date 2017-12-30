@@ -13,8 +13,8 @@ import os.path
 import shelve, contextlib
 
 #datapath = '../lcncluster/paper_data_final/'
-datapath = '../data/'
-#datapath = '../data_draft4/'
+datapath = '../dataFOLLOWControl/'
+#datapath = '../data/'
 
 # set seed for selecting random weight indices
 np.random.seed([1])
@@ -2027,8 +2027,10 @@ def fig_control_nips(controlFileNames):
         torqueOut = data_dict['torqueOut']          # torque inferred by inverse network
         true_torque = data_dict['trueTorque']       # true torque
 
+    # trueTorque not saved properly
+    #ax1.plot(trange,true_torque,color='b',lw=plot_linewidth)
     ax1.plot(trange,torqueOut,color='r',lw=plot_linewidth)
-    ax1.set_ylim((-.2,.2))
+    ax1.set_ylim((-.3,.7))
     ax1.get_xaxis().get_major_formatter().set_useOffset(False)
     beautify_plot(ax1,x0min=False,y0min=False)
     axes_labels(ax1,'time (s)','$\hat{u}_{1,2}$',xpad=-3,ypad=-3)
@@ -2155,8 +2157,8 @@ def fig_inverse_nips(dataFileNames,testFileName,savetag,addtime=0):
         axes_off(ax,xlabelsOff,ylabelsOff)
     axes_labels(ax4,'time (s)','',xpad=-3,ypad=-3)
     axes_labels(ax6,'time (s)','',xpad=-3,ypad=-3)
-    axes_labels(ax1,'','$x$',xpad=-3,ypad=-3)
-    axes_labels(ax3,'time (s)','$\hat{u},u$',xpad=-3,ypad=-3)
+    axes_labels(ax1,'','$x_\\beta$',xpad=-3,ypad=-3)
+    axes_labels(ax3,'time (s)','$\hat{u}_2,u_2$',xpad=-3,ypad=-3)
 
     ## error evolution - full time
     #plot_error_fulltime(ax5,dataFileName)
@@ -2568,16 +2570,21 @@ def fig_difftau_causaltau(datafiles):
         ax.plot(warp_line[0],warp_line[1],warp_line[2],c='b')
         print(warp_line)
         if x==50 and y==50: ax.scatter(x,y,mserrtest,\
-                    edgecolors='b',facecolors='b',marker='*',s=15,clip_on=False)
+                    edgecolors='b',facecolors='b',marker='*',s=25,clip_on=False)
     for x,y,z in weft_lines:
         ax.plot(x,y,z,c='b')
-    ax.set_zlabel('$\langle err^2 \\rangle_{N_d,t}$',labelpad=-5)
+    # Set rotation angle to 30 degrees
+    ax.view_init(azim=30)
+    ax.set_xlim([0,100])
+    ax.set_ylim([20,100])
+    ax.zaxis.set_rotate_label(False)  # disable automatic rotation
+    ax.set_zlabel('$\langle err^2 \\rangle_{N_d,t}$',labelpad=-5,rotation=90)
     beautify_plot3d(ax,x0min=False,y0min=False)
-    axes_labels(ax,'differential $\Delta$ (ms)','causal $\Delta_u$ (ms)',xpad=-3,ypad=-3)
+    axes_labels(ax,'$\Delta$ (ms)','$\Delta_u$ (ms)',xpad=-3,ypad=-3)
     fig.tight_layout()
     fig.savefig('figures/difftau_causaltau.pdf',dpi=fig_dpi)    
 
-def fig_torquefilt(datafiles):
+def fig_torquefilt(datafiles,maindatafiles):
     fig = plt.figure(facecolor='w',figsize=(columnwidth, columnwidth*3/4),dpi=fig_dpi)
     ax = fig.add_subplot(111)
 
@@ -2588,8 +2595,11 @@ def fig_torquefilt(datafiles):
         filttau_list.append(taufilt)
         mserrlist.append(mserrtest)
     ax.plot(filttau_list,mserrlist,c='k')
-    ax.scatter(filttau_list,mserrlist,c='k',s=10,clip_on=False)
-    ax.set_xlim([0,80])
+    ax.scatter(filttau_list,mserrlist,c='k',s=8,clip_on=False)
+    for num,(taufilt,filename) in enumerate(maindatafiles):
+        mserrtest,mserrtrainend = get_MSE(filename+'_end.shelve')
+        ax.scatter(taufilt,mserrtest,c='k',marker=('*','D')[num],s=(40,25)[num],clip_on=False)
+    ax.set_xlim([0,100])
     ax.set_ylim([0.000,0.025])
     beautify_plot(ax,x0min=True,y0min=False)
     axes_labels(ax,'torque filtering $\\tau$ (ms)','$\langle err^2 \\rangle_{N_d,t}$',xpad=-2,ypad=-2)
@@ -2788,10 +2798,14 @@ if __name__ == "__main__":
     ## 10000s is worse than 3000s (see my notes)
     ##anim_robot('inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLReach3_10.0s_control',endTag='',delay=0.1)
     ##anim_robot_noref('robot2_todorov_gravity_traj_write_f_control',endTag='')
-    #anim_robot_noref('robot2_todorov_gravity_traj_v2_diamond_gain3.0_control',endTag='')
-    #anim_robot_noref('robot2_todorov_gravity_traj_v2_star_gain3.0_control',endTag='')
+    ##anim_robot_noref('robot2_todorov_gravity_traj_v2_diamond_gain3.0_control',endTag='')
+    ##anim_robot_noref('robot2_todorov_gravity_traj_v2_star_gain3.0_control',endTag='')
+
+    #anim_robot_noref('robot2_todorov_gravity_traj_v2_diamond_diff-ff_gain0.0_control',endTag='')
+    #anim_robot_noref('robot2_todorov_gravity_traj_v2_star_diff-ff_gain0.0_control',endTag='')
     #anim_robot_noref('robot2_todorov_gravity_traj_v2_diamond_diff-ff_gain3.0_control',endTag='')
     #anim_robot_noref('robot2_todorov_gravity_traj_v2_star_diff-ff_gain3.0_control',endTag='')
+
     #fig_control_nips([['robot2_todorov_gravity_traj_v2_diamond_diff-ff_gain0.0_control',
     #                    'robot2_todorov_gravity_traj_v2_diamond_diff-ff_gain3.0_control'],
     #                 ['robot2_todorov_gravity_traj_v2_star_diff-ff_gain0.0_control',
@@ -2808,91 +2822,97 @@ if __name__ == "__main__":
     ##                'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_continueFrom50000.0_seed7by0.3amplVaryHeights_10000.0s'),
     ##                'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom60000.0_seed2by0.3RLSwing_10.0s',
     ##                '_diff-ff',50000)
-    # inverse model with only diff-ff learning -- with const gain, scaled varFactors, d30c40
-    #fig_inverse_nips('inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
-    #                '../data/inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLSwing_10.0s',
-    #                '_diff-ff',0)
+    # inverse model with only diff-ff learning -- with const gain, scaled varFactors, d50c50
+    #fig_inverse_nips('inverse_diff_ff_S2_d50c50_N3000_ocl_Nexc5000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
+    #               'inverse_diff_ff_S2_d50c50_N3000_ocl_Nexc5000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLSwing_10.0s',
+    #               '_diff-ff',0)
     
-    #fig_inverse_compare([['inverse_diff_ff_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
-    #                    ['inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s'],
-    #                    ['inverse_diff-ff_rec_by10eta_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
-    #                    ['inverse_Ddiff_ff_40ms_ocl_Nexc25000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
-    #                    ['inverse_ff_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
-    #                    ['inverse_Mdiff_ff_N100_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']])
+    ##fig_inverse_compare([['inverse_diff_ff_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    ##                    ['inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s'],
+    ##                    ['inverse_diff-ff_rec_by10eta_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    ##                    ['inverse_Ddiff_ff_40ms_ocl_Nexc25000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    ##                    ['inverse_ff_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    ##                    ['inverse_Mdiff_ff_N100_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']])
 
-    #fig_inverse_compare_v2([['inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
-    #                    ['inverse_Ddiff_ff_S2_c40_ocl_Nexc900_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
-    #                    ['inverse_ff_S2_c40_ocl_Nexc450_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']])
+    #fig_inverse_compare_v2([['inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    ['inverse_Ddiff_ff_S2_d50c50_ocl_Nexc900_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    #                    ['inverse_ff_S2_c50_ocl_Nexc450_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']])
 
-    # backprop comparisons
-    #fig_inverse_compare(# usual 2e-3 learning rate, but note that seedRin=3 was used here, whereas 2 is the default everywhere else
-    #                    [['inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed3by0.3amplVaryHeights_10000.0s'],
-    #                    # 2e-3 / 2.5 learning rate
-    #                    ['inverse_rep_eta2_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
-    #                    # 2e-3 / 25 learning rate
-    #                    ['inverse_rep_eta_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
-    #                    # 2e-3 / 5 learning rate
-    #                    ['inverse_rep_eta1_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
-    #                    # diff-ff net learned by FOLLOW using nengoDL and softLIFRate neurons
-    #                    ['inverse_diff_ff_N200_50ms_DLnoBP_Nexc500_softLIF_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
-    #                    # diff-ff net learned by backprop using nengoDL and softLIFRate neurons
-    #                    ['inverse_diff_ff_N200_50ms_DL_Nexc500_softLIF_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']],
-    #                    file_end='_extras')
+    ## backprop comparisons
+    ##fig_inverse_compare(# usual 2e-3 learning rate, but note that seedRin=3 was used here, whereas 2 is the default everywhere else
+    ##                    [['inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed3by0.3amplVaryHeights_10000.0s'],
+    ##                    # 2e-3 / 2.5 learning rate
+    ##                    ['inverse_rep_eta2_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    ##                    # 2e-3 / 25 learning rate
+    ##                    ['inverse_rep_eta_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    ##                    # 2e-3 / 5 learning rate
+    ##                    ['inverse_rep_eta1_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    ##                    # diff-ff net learned by FOLLOW using nengoDL and softLIFRate neurons
+    ##                    ['inverse_diff_ff_N200_50ms_DLnoBP_Nexc500_softLIF_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
+    ##                    # diff-ff net learned by backprop using nengoDL and softLIFRate neurons
+    ##                    ['inverse_diff_ff_N200_50ms_DL_Nexc500_softLIF_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']],
+    ##                    file_end='_extras')
     
     # 3D plot of mean squared error versus different differential tau-s and causal tau-s
     # Note that the filenames are not all consistent in the _S2_d..c.._N200 format
-    fig_difftau_causaltau((#[(10,20,'inverse_diff_ff_S2_d10c20200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
-                        [(10,30,'inverse_diff_ff_S2_d10c30_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (15,30,'inverse_diff_ff_S2_d15c30200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (20,30,'inverse_diff_ff_S2_d20c30_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (25,30,'inverse_diff_ff_S2_d25c30_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (30,30,'inverse_diff_ff_S2_d30c30_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
-                        [(10,40,'inverse_diff_ff_S2_d10c40200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (20,40,'inverse_diff_ff_S2_d20c40200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (30,40,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (35,40,'inverse_diff_ff_S2_d35c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (40,40,'inverse_diff_ff_S2_d40c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
-                       [(10,50,'inverse_diff_ff_S2_d10c50200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (25,50,'inverse_diff_ff_S2200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (40,50,'inverse_diff_ff_S2_d40c50_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (45,50,'inverse_diff_ff_S2_d45c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (50,50,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
-                        [(10,60,'inverse_diff_ff_S2_d10c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            #(20,60,'inverse_diff_ff_S2_d20c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (30,60,'inverse_diff_ff_S2_d30c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            #(40,60,'inverse_diff_ff_S2_d40c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (50,60,'inverse_diff_ff_S2_d50c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (55,60,'inverse_diff_ff_S2_d55c60_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (60,60,'inverse_diff_ff_S2_d60c60_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
-                        [(10,80,'inverse_diff_ff_S2_d10c80_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (40,80,'inverse_diff_ff_S2_d40c80_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (70,80,'inverse_diff_ff_S2_d70c80_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (75,80,'inverse_diff_ff_S2_d75c80_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (80,80,'inverse_diff_ff_S2_d80c80_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
-                        [(10,100,'inverse_diff_ff_S2_d10c100_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (50,100,'inverse_diff_ff_S2_d50c100_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (90,100,'inverse_diff_ff_S2_d90c100_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (95,100,'inverse_diff_ff_S2_d95c100_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-                            (100,100,'inverse_diff_ff_S2_d100c100_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')]
-                        ))
+    #fig_difftau_causaltau((#[(10,20,'inverse_diff_ff_S2_d10c20200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+    #                    [(10,30,'inverse_diff_ff_S2_d10c30_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (15,30,'inverse_diff_ff_S2_d15c30200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (20,30,'inverse_diff_ff_S2_d20c30_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (25,30,'inverse_diff_ff_S2_d25c30_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (30,30,'inverse_diff_ff_S2_d30c30_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+    #                    [(10,40,'inverse_diff_ff_S2_d10c40200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (20,40,'inverse_diff_ff_S2_d20c40200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (30,40,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                       (35,40,'inverse_diff_ff_S2_d35c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (40,40,'inverse_diff_ff_S2_d40c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+    #                   [(10,50,'inverse_diff_ff_S2_d10c50200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (25,50,'inverse_diff_ff_S2200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (40,50,'inverse_diff_ff_S2_d40c50_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (45,50,'inverse_diff_ff_S2_d45c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (50,50,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+    #                    [(10,60,'inverse_diff_ff_S2_d10c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        #(20,60,'inverse_diff_ff_S2_d20c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (30,60,'inverse_diff_ff_S2_d30c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        #(40,60,'inverse_diff_ff_S2_d40c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (50,60,'inverse_diff_ff_S2_d50c60_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (55,60,'inverse_diff_ff_S2_d55c60_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (60,60,'inverse_diff_ff_S2_d60c60_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+    #                    [(10,80,'inverse_diff_ff_S2_d10c80_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (40,80,'inverse_diff_ff_S2_d40c80_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (70,80,'inverse_diff_ff_S2_d70c80_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (75,80,'inverse_diff_ff_S2_d75c80_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (80,80,'inverse_diff_ff_S2_d80c80_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')],
+    #                    [(10,100,'inverse_diff_ff_S2_d10c100_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (50,100,'inverse_diff_ff_S2_d50c100_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (90,100,'inverse_diff_ff_S2_d90c100_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (95,100,'inverse_diff_ff_S2_d95c100_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                        (100,100,'inverse_diff_ff_S2_d100c100_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')]
+    #                    ))
 
-    #fig_torquefilt(((0,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
-    #                (5,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.005_10000.0s'),
-    #                (10,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.01_10000.0s'),
-    #                (20,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.02_10000.0s'),
-    #                (30,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.03_10000.0s'),
-    #                (40,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.04_10000.0s'),
-    #                (50,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.05_10000.0s'),
-    #                (60,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.06_10000.0s'),
-    #                (70,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.07_10000.0s'),
-    #                (80,'inverse_diff_ff_S2_d30c40_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.08_10000.0s')
-    #                ))
+    #fig_torquefilt(((0,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                (5,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.005_10000.0s'),
+    #                (10,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.01_10000.0s'),
+    #                (20,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.02_10000.0s'),
+    #                (30,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.03_10000.0s'),
+    #                (40,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.04_10000.0s'),
+    #                (50,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.05_10000.0s'),
+    #                (60,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.06_10000.0s'),
+    #                (70,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.07_10000.0s'),
+    #                (80,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.08_10000.0s'),
+    #                (90,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.09_10000.0s'),
+    #                (100,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_filt0.1_10000.0s')
+    #                ),
+    #                ((0,'inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'),
+    #                (0,'inverse_diff_ff_S2_d50c50_N3000_ocl_Nexc5000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s')))
 
     #fig_reclearning((
     #                (2e-3,'inverse_rec_goodenc_tau20.20_eta1000_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
     #                (2e-4,'inverse_rec_goodenc_tau20.20_eta1000by10_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
     #                (1e-4,'inverse_rec_goodenc_tau20.20_eta1000by20_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
     #                (2e-5,'inverse_rec_goodenc_tau20.20_eta1000by100_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #               (2e-6,'inverse_rec_goodenc_tau20.20_eta1000by1000_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #                (2e-8,'inverse_rec_goodenc_tau20.20_eta1000by100000_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
     #                (1e-10,'inverse_rec_goodenc_tau20.20_eta1000byinf_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s')
     #                ))
 
