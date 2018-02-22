@@ -19,7 +19,9 @@ bot = 'arm_2link'
 ## choose one task out of the below:
 #task = 'write_f'
 #task = 'star'
-task = 'diamond'
+#task = 'diamond'
+#task = 'sdiamond'
+task = 'zigzag'
 #task = '3point'
 
 #np.random.seed(1)
@@ -50,7 +52,17 @@ elif bot == 'arm_2link':
                                     + np.array((0.,-0.58))  # base-point shift
     elif task == 'diamond':
         # crude 'digital-diamond'
+        # big diamond -- reaches arm limits
         crudeTargetTraj = np.array([(0.,0.),(0.28,0.08),(0.4,0.4),(0.12,0.35),(0.,0.)])\
+                                    + np.array((0.,-0.58))  # base-point shift
+    elif task == 'sdiamond':
+        # crude 'digital-diamond'
+        # smaller diamond
+        crudeTargetTraj = np.array([(0.,0.),(0.14,0.04),(0.2,0.2),(0.06,0.175),(0.,0.)])\
+                                    + np.array((0.,-0.58))  # base-point shift
+    elif task == 'zigzag':
+        # zig-zag
+        crudeTargetTraj = np.array([(0.,0.),(0.02,0.1),(0.12,0.1),(0.14,0.18),(0.24,0.18)])\
                                     + np.array((0.,-0.58))  # base-point shift
     elif task == '3point':
         # 3-point testing
