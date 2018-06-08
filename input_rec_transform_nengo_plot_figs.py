@@ -1,6 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+# ICML 2018 camera ready version does not allow type 3 plots
+# added 2 lines below as per: http://phyletica.org/matplotlib-fonts/ 
+#  see also: https://stackoverflow.com/questions/13132194/type-1-fonts-with-log-graphs
+#  and https://tex.stackexchange.com/questions/18687/how-to-generate-pdf-without-any-type3-fonts
+mpl.rcParams['pdf.fonttype'] = 42
+mpl.rcParams['ps.fonttype'] = 42
 import matplotlib.patheffects as mpl_pe
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.patches as patches
@@ -2005,7 +2011,7 @@ def anim_robot_noref(dataFileName,endTag='_start'):         # no need of delay h
     #                                                # very slow when run over network, dunno if run locally
 
 
-def fig_control_nips(controlFileNames):
+def fig_control_icml(controlFileNames):
     fig = plt.figure(facecolor='w',figsize=(columnwidth, columnwidth),dpi=fig_dpi)
     ax1 = plt.subplot2grid((3,6),(0,0),rowspan=1,colspan=3,zorder=1)
     ax2 = plt.subplot2grid((3,6),(0,3),rowspan=1,colspan=3,zorder=1)
@@ -2084,7 +2090,7 @@ def fig_control_nips(controlFileNames):
     fig.savefig('figures/fig_control_inverse.pdf',dpi=fig_dpi)
     print("done saving figure for control")
 
-def fig_inverse_nips(dataFileNames,testFileName,savetag,addtime=0):
+def fig_inverse_icml(dataFileNames,testFileName,savetag,addtime=0):
     if isinstance(dataFileNames, (list,tuple)):
         dataFileNameStart = dataFileNames[0]
         dataFileNameEnd = dataFileNames[1]
@@ -2226,7 +2232,7 @@ def fig_inverse_nips(dataFileNames,testFileName,savetag,addtime=0):
     fig.savefig('figures/fig_inverse'+savetag+'.pdf',dpi=fig_dpi)
     print("done saving figure for inverse model")
     
-def fig_inverse_nips_both(dataFileName_rec,testFileName_rec,dataFileName_dff,testFileName_dff):
+def fig_inverse_icml_both(dataFileName_rec,testFileName_rec,dataFileName_dff,testFileName_dff):
     fig = plt.figure(facecolor='w',figsize=(2*columnwidth, 2*columnwidth),dpi=fig_dpi)
     #figlen = 6
     #N,plotvar = 2,1
@@ -2879,26 +2885,29 @@ if __name__ == "__main__":
     #anim_robot_noref('robot2_todorov_gravity_traj_v2_sdiamond_diff-ff_gain3.0_control',endTag='')
     #anim_robot_noref('robot2_todorov_gravity_traj_v2_zigzag_diff-ff_gain3.0_control',endTag='')
 
-    fig_control_nips([['robot2_todorov_gravity_traj_v2_sdiamond_diff-ff_gain0.0_control',
-                        'robot2_todorov_gravity_traj_v2_sdiamond_diff-ff_gain3.0_control'],
-                     ['robot2_todorov_gravity_traj_v2_zigzag_diff-ff_gain0.0_control',
-                        'robot2_todorov_gravity_traj_v2_zigzag_diff-ff_gain3.0_control']])
+    # FIGURE 7: ICML 2018
+    #fig_control_icml([['robot2_todorov_gravity_traj_v2_sdiamond_diff-ff_gain0.0_control',
+    #                    'robot2_todorov_gravity_traj_v2_sdiamond_diff-ff_gain3.0_control'],
+    #                 ['robot2_todorov_gravity_traj_v2_zigzag_diff-ff_gain0.0_control',
+    #                    'robot2_todorov_gravity_traj_v2_zigzag_diff-ff_gain3.0_control']])
+    
     ## inverse model with only recurrent learning -- NIPS obsolete
-    ##fig_inverse_nips('inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_3000.0s',
+    ##fig_inverse_icml('inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_3000.0s',
     ##                'inverse_100ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom3000.0_seed2by0.3RLSwing_10.0s')
     ## inverse model with only recurrent learning
-    ##fig_inverse_nips('inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s',
+    ##fig_inverse_icml('inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s',
     ##                'inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom4000.0_seed2by0.3RLSwing_10.0s',
     ##                '_rec')
     ## inverse model with only diff-ff learning -- Obsolete, as I used const gain, scaled varFactors, see next function call below
-    ##fig_inverse_nips(('inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
+    ##fig_inverse_icml(('inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
     ##                'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_continueFrom50000.0_seed7by0.3amplVaryHeights_10000.0s'),
     ##                'inverse_diff_ff_rec_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom60000.0_seed2by0.3RLSwing_10.0s',
     ##                '_diff-ff',50000)
+    # FIGURE 2: ICML 2018
     # inverse model with only diff-ff learning -- with const gain, scaled varFactors, d50c50
-    #fig_inverse_nips('inverse_diff_ff_S2_d50c50_N3000_ocl_Nexc5000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
-    #               'inverse_diff_ff_S2_d50c50_N3000_ocl_Nexc5000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLSwing_10.0s',
-    #               '_diff-ff',0)
+    fig_inverse_icml('inverse_diff_ff_S2_d50c50_N3000_ocl_Nexc5000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s',
+                   'inverse_diff_ff_S2_d50c50_N3000_ocl_Nexc5000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_testFrom10000.0_seed2by0.3RLSwing_10.0s',
+                   '_diff-ff',0)
     
     ##fig_inverse_compare([['inverse_diff_ff_N200_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
     ##                    ['inverse_rep_50ms_ocl_Nexc5000_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_4000.0s'],
@@ -2907,6 +2916,7 @@ if __name__ == "__main__":
     ##                    ['inverse_ff_50ms_ocl_Nexc3000_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s'],
     ##                    ['inverse_Mdiff_ff_N100_50ms_ocl_Nexc500_norefinptau_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']])
 
+    # FIGURE 5: ICML 2018
     #fig_inverse_compare_v2(('2345','1234','3456','4567','5678'),('2','1','3','4','5'),
     #                    [['inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds','_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed','by0.3amplVaryHeights_10000.0s'],
     #                    ['inverse_Ddiff_ff_S2_d50c50_ocl_Nexc900_norefinptau_seeds','_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed','by0.3amplVaryHeights_10000.0s'],
@@ -2927,6 +2937,7 @@ if __name__ == "__main__":
     ##                    ['inverse_diff_ff_N200_50ms_DL_Nexc500_softLIF_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_10000.0s']],
     ##                    file_end='_extras')
     
+    # Figure 3: ICML 2018
     # 3D plot of mean squared error versus different differential tau-s and causal tau-s
     # Also plots of mean squared error versus filtering on the torque and number of neurons N
     # Note that the filenames are not all consistent in the _S2_d..c.._N200 format
@@ -2994,15 +3005,16 @@ if __name__ == "__main__":
     #  is  [0.013218005, 0.0071377158, 0.0059529752, 0.004380133, 0.0041038147, 0.0041658767]
     #      +- [0.0029529757, 0.0019492798, 0.00083263987, 0.00083129783, 0.00066118699, 0.00096462487]
 
+    # Figure 4: ICML 2018
     # note learning rate in file is actually eta*k, here I plot eta, so divide the script learning rate by 10.
-    fig_reclearning((
-                    (2e-4,'inverse_rec_goodenc_tau20.20_eta1000_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
-                    (2e-5,'inverse_rec_goodenc_tau20.20_eta1000by10_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
-                    (1e-5,'inverse_rec_goodenc_tau20.20_eta1000by20_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
-                    (2e-6,'inverse_rec_goodenc_tau20.20_eta1000by100_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
-                    (2e-7,'inverse_rec_goodenc_tau20.20_eta1000by1000_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
-                    (2e-9,'inverse_rec_goodenc_tau20.20_eta1000by100000_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
-                    (1e-11,'inverse_rec_goodenc_tau20.20_eta1000byinf_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s')
-                    ))
+    #fig_reclearning((
+    #                (2e-4,'inverse_rec_goodenc_tau20.20_eta1000_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #                (2e-5,'inverse_rec_goodenc_tau20.20_eta1000by10_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #                (1e-5,'inverse_rec_goodenc_tau20.20_eta1000by20_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #                (2e-6,'inverse_rec_goodenc_tau20.20_eta1000by100_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #                (2e-7,'inverse_rec_goodenc_tau20.20_eta1000by1000_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #                (2e-9,'inverse_rec_goodenc_tau20.20_eta1000by100000_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s'),
+    #                (1e-11,'inverse_rec_goodenc_tau20.20_eta1000byinf_50ms_ocl_Nexc900_norefinptau_directu_seeds2345_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed2by0.3amplVaryHeights_500.0s')
+    #                ))
 
     #plt.show()     # don't use this when running anim_robot() - gives a weird large interactive slow plot
