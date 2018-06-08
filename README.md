@@ -2,7 +2,8 @@
   
 Code for Gilra and Gerstner, ICML 2018 (to appear), preprint at [https://arxiv.org/abs/1712.10158](https://arxiv.org/abs/1712.10158).  
   
-First, learn the inverse model using FOLLOW [Gilra and Gerstner, eLife 2017;6:e28295](https://elifesciences.org/articles/28295).  
+First, learn the inverse model using the FOLLOW learning scheme introduced earlier in [Gilra and Gerstner, eLife 2017;6:e28295](https://elifesciences.org/articles/28295) -- see also [https://github.com/adityagilra/FOLLOW](https://github.com/adityagilra/FOLLOW).  
+  
 Then use the inverse model to control an arm to reproduce a desired trajectory.  
 
 ##1. Inverse model
