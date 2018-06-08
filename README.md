@@ -6,7 +6,7 @@ First, learn the inverse model using the FOLLOW learning scheme introduced earli
   
 Then use the inverse model to control an arm to reproduce a desired trajectory.  
 
-##1. Inverse model
+## 1. Inverse model
 Learn the inverse model using FOLLOW learning via motor babbling. The differential feedforward network architecture is used.  
 `nohup python inverse_diff_ff_robot_nengo_ocl.py &> nohup.out &`
 Other similarly named script files are for other architectures explored in the paper.
@@ -14,7 +14,7 @@ Other similarly named script files are for other architectures explored in the p
 These scripts import sim_robot.py and arm*.py for simulating the 'true' arm dynamics.
 They save in separate files: the variables monitored during learning and the final weights.
 
-##2. Inverse model for motor control
+## 2. Inverse model for motor control
 Load the pre-learned weights file and a desired trajectory and use it to control the true arm.
 First generate the desired trajectory (see settings for 'zigzag' and 'diamond' within the file):
 `python generate_arm_trajectory_v2.py`
