@@ -1,6 +1,9 @@
 # FOLLOWControl  
   
-Code for Gilra and Gerstner, ICML 2018 (to appear), preprint at [https://arxiv.org/abs/1712.10158](https://arxiv.org/abs/1712.10158).  
+Code for  
+[Non-Linear Motor Control by Local Learning in Spiking Neural Networks](http://proceedings.mlr.press/v80/gilra18a.html)
+Aditya Gilra, Wulfram Gerstner; Proceedings of the 35th International Conference on Machine Learning, PMLR 80:1768-1777, 2018.  
+Earlier preprint at [https://arxiv.org/abs/1712.10158](https://arxiv.org/abs/1712.10158).  
   
 First, learn the inverse model using the FOLLOW learning scheme introduced earlier in [Gilra and Gerstner, eLife 2017;6:e28295](https://elifesciences.org/articles/28295) -- see also [https://github.com/adityagilra/FOLLOW](https://github.com/adityagilra/FOLLOW).  
   
