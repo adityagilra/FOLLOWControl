@@ -9,7 +9,21 @@ First, learn the inverse model using the FOLLOW learning scheme introduced earli
   
 Then use the inverse model to control an arm to reproduce a desired trajectory.  
 
+## 0. Installation
+`apt-get --assume-yes install python-numpy python-scipy python-matplotlib git python-pip`  
+You need to install opencl - this would be GPU specific perhaps. For my GPUs, I need:  
+`apt-get --assume-yes install ocl-icd-opencl-dev nvidia-361 nvidia-settings nvidia-opencl-icd-361 libffi-dev`  
+Nengo-ocl and dependencies should ger installed by:  
+`pip install nengo-ocl`  
+Else see developer installation at: [https://github.com/nengo/nengo-ocl](https://github.com/nengo/nengo-ocl)  
+  
+The learning rate in inverse_diff_ff_robot_nengo_ocl.py is set to 2e-4 (valid for nengo version >= 2.5.0 at the time of writing -- earlier versions require higher 1e-3 learning rate, see my notes in the [FOLLOW README](https://github.com/adityagilra/FOLLOW) ).  
+`PES_learning_rate_FF = 2e-4   
+PES_learning_rate_REC = 2e-4`  
+  
 ## 1. Inverse model
+Set the GPU using:
+`export PYOPENCL_CTX=':0'`
 Learn the inverse model using FOLLOW learning via motor babbling. The differential feedforward network architecture is used.  
 `nohup python inverse_diff_ff_robot_nengo_ocl.py &> nohup.out &`  
 Other similarly named script files are for other architectures explored in the paper.  

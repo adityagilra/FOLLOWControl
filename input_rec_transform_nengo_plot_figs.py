@@ -19,8 +19,8 @@ import os.path
 import shelve, contextlib
 
 #datapath = '../lcncluster/paper_data_final/'
-datapath = '../dataFOLLOWControl/'
-#datapath = '../data/'
+#datapath = '../dataFOLLOWControl/'
+datapath = '../data/'
 
 # set seed for selecting random weight indices
 np.random.seed([1])
@@ -2918,9 +2918,12 @@ if __name__ == "__main__":
 
     # FIGURE 5: ICML 2018
     #fig_inverse_compare_v2(('2345','1234','3456','4567','5678'),('2','1','3','4','5'),
-    #                    [['inverse_diff_ff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds','_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed','by0.3amplVaryHeights_10000.0s'],
+    #                    [['inverse_diff_sameff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds','_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed','by0.3amplVaryHeights_10000.0s'],
     #                    ['inverse_Ddiff_ff_S2_d50c50_ocl_Nexc900_norefinptau_seeds','_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed','by0.3amplVaryHeights_10000.0s'],
     #                    ['inverse_ff_S2_c50_ocl_Nexc450_norefinptau_seeds','_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed','by0.3amplVaryHeights_10000.0s']])
+    ##fig_inverse_compare_v2(('2345','1234','3456','4567','5678'),('2','1','3','4','5'),
+    ##                    [['inverse_diff_sameff_S2_d50c50_N200_ocl_Nexc500_norefinptau_seeds','_weightErrorCutoff0.0_nodeerr_learn_rec_nocopycat_func_robot2_todorov_gravity_seed','by0.3amplVaryHeights_10000.0s']
+    ##                    ])
 
     ## backprop comparisons
     ##fig_inverse_compare(# usual 2e-3 learning rate, but note that seedRin=3 was used here, whereas 2 is the default everywhere else

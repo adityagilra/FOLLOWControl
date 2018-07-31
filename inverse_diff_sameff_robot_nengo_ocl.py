@@ -417,7 +417,7 @@ pathprefix = '../data/'
 inputStr = ('_trials' if trialClamp else '') + \
                     ('_seed'+str(seedRin)+'by'+str(inputreduction)+\
                     (inputType if inputType != 'rampLeave' else ''))
-baseFileName = pathprefix+'inverse_diff_ff_S2_d50c50_N'+str(Nin)+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
+baseFileName = pathprefix+'inverse_diff_sameff_S2_d50c50_N'+str(Nin)+('_ocl' if OCL else '')+'_Nexc'+str(Nexc) + \
                     '_norefinptau_seeds'+str(seedR0)+str(seedR1)+str(seedR2)+str(seedR4) + \
                     ('_filt'+str(tauFilt) if filterInp else '') + \
                     ('_inhibition' if inhibition else '') + \
@@ -559,14 +559,11 @@ if __name__ == "__main__":
                                                                 # reference input torque evolution
                                                                 # scale input to network by torque factors
         # input layer from which feedforward weights to ratorOut are computed
-        ratorIn = nengo.Ensemble( Nin, dimensions=Nobs, radius=reprRadiusIn,
-                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nin)*nrngain,
+        ratorIn = nengo.Ensemble( Nin*2, dimensions=Nobs*2, radius=reprRadiusIn,
+                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nin*2)*nrngain,
                             neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
-        ratorInD = nengo.Ensemble( Nin, dimensions=Nobs, radius=reprRadiusIn,
-                            bias=nengo.dists.Uniform(1-nrngain,1+nrngain), gain=np.ones(Nin)*nrngain,
-                            neuron_type=nengo.neurons.LIF(), seed=seedR1, label='ratorIn' )
-        nengo.Connection(rateEvolve, ratorIn, synapse=None)
-        nengo.Connection(rateEvolveD, ratorInD, synapse=None)
+        nengo.Connection(rateEvolve, ratorIn[:Nobs], synapse=None)
+        nengo.Connection(rateEvolveD, ratorIn[Nobs:], synapse=None)
                                                                 # No filtering here as no filtering/delay in the plant/arm
         # layer with learning incorporated
         #intercepts = np.append(np.random.uniform(-0.2,0.2,size=Nexc//2),np.random.uniform(-1.,1.,size=Nexc//2))
@@ -586,14 +583,8 @@ if __name__ == "__main__":
             nengo.Connection(endTrialClamp,ratorOut.neurons,synapse=1e-3)
                                                                     # fast synapse for fast-reacting clamp
         
-        EtoE = nengo.Connection(ratorInD.neurons, ratorOut.neurons,
-                                    transform=np.zeros((Nexc,Nin)), synapse=tau)   # synapse is tau_syn for filtering
-
-        # make InEtoE connection after EtoE, so that reprRadius from EtoE
-        #  instead of reprRadiusIn from InEtoE is used to compute decoders for ratorOut
-        InEtoE = nengo.Connection(ratorIn.neurons, ratorOut.neurons,
-                                    transform=np.zeros((Nexc,Nin)), synapse=tau)
-                                                                    # Wdyn2 same as for EtoE, but mean(InEtoE) = mean(EtoE)/20
+        EtoE = nengo.Connection(ratorIn.neurons, ratorOut.neurons,
+                                    transform=np.zeros((Nexc,2*Nin)), synapse=tau)   # synapse is tau_syn for filtering
 
         nodeIn_probe = nengo.Probe(nodeIn, synapse=None)
 
@@ -680,14 +671,6 @@ if __name__ == "__main__":
                                                             # It works only if you set it
                                                             # in the constructor PES() above
 
-            # feedforward learning rule
-            InEtoERulesDict = { 'PES' : nengo.PES(learning_rate=PES_learning_rate_FF,
-                                            pre_tau=tau) }#,
-                                            #clipType=excClipType,
-                                            #decay_rate_x_dt=excPES_weightsDecayRate*dt,
-                                            #integral_tau=excPES_integralTau) }
-            InEtoE.learning_rule_type = InEtoERulesDict
-
             if trialClamp:
                 # if trialClamp just forcing error to zero doesn't help, as errorWt decays at long errorWeightTau,
                 #  so force errorWt also to zero, so that learning is shutoff at the end of a trial
@@ -705,8 +688,6 @@ if __name__ == "__main__":
 
             error_conn = nengo.Connection(\
                     errorWt,plasticConnEE.learning_rule['PES'],synapse=dt)
-            error_conn = nengo.Connection(\
-                    errorWt,InEtoE.learning_rule['PES'],synapse=dt)
 
             ###
             ### feed the error back to force output to follow the input (for both recurrent and feedforward learning) ###
@@ -775,8 +756,6 @@ if __name__ == "__main__":
             #sim.data[plasticConnEE].weights = weights_dict['learnedWeights']       # can't be set, only read
             sim.signals[ sim.model.sig[plasticConnEE]['weights'] ] \
                                 = weights_dict['learnedWeights']                    # can be set if weights/decoders are plastic
-            sim.signals[ sim.model.sig[InEtoE]['weights'] ] \
-                                = weights_dict['learnedInWeights']                  # can be set if weights/decoders are plastic
     else:
         print('Not loading any pre-learned weights.')
 
@@ -941,7 +920,6 @@ if __name__ == "__main__":
                 ) as weights_dict:
             #weights_dict['learnedWeights'] = sim.data[plasticConnEE].weights
                                                                         # this only saves the initial weights
-            weights_dict['learnedInWeights'] = sim.signals[ sim.model.sig[InEtoE]['weights'] ]
             weights_dict['learnedWeights'] = sim.signals[ sim.model.sig[plasticConnEE]['weights'] ]
                                                                         # this is the signal updated by operator-s set by the learning rule
         print('saved end weights to',weightsSaveFileName)
